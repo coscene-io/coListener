@@ -16,14 +16,12 @@ jobs:
         with:
           path: src/coListener
 
-      - name: Get release version
-        id: get_version
+      - name: build
         run: |          
           VERSION=${GITHUB_REF#refs/tags/}
+          echo "current version: $VERSION"
           echo "$VERSION" > version
-
-      - name: build
-        run: |
+          cat version
           /ros_entrypoint.sh colcon build --packages-select coListener
 
       - name: zip-artifact
