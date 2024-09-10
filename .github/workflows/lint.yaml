@@ -22,5 +22,4 @@ jobs:
 
     - name: Run Flake8
       run: |
-        pip list -v
         python -m flake8 . -v
