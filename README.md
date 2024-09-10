@@ -21,7 +21,7 @@
     bag_storage_path = "/cos/files"    # bag的存储路径
     error_code_topic = "/error_code"   # 发布error code的topic
     use_service = False                # 是否调用service进行录包（当前按照False）
-    waiting_data_minutes = 60          # 数据检测超时时间（若{waiting_data_minutes} 分钟后未能收集到全部数据，直接上传已经收集到等数据）
+    waiting_data_minutes = 60          # 数据检测超时时间（ 若{waiting_data_minutes}分钟后未能收集到全部数据，直接上传已经收集到的数据）
     ```
   * 编译 & 运行
     ```bash
