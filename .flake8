@@ -1,0 +1,4 @@
+# .flake8 or setup.cfg
+[flake8]
+max-line-length = 100
+exclude = .git,__pycache__,docs/,build/,dist/

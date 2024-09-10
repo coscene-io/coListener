@@ -505,7 +505,7 @@ class CoListener(Node):
             json.dump(info.to_dict(), fp, indent=4)
 
     def _check_and_upload_files(self):
-        _log.info(f"check and upload files...")
+        _log.info("check and upload files...")
         bag_interval_minutes = 2
         bag_files = []
         files = os.listdir(self.bag_storage_path)
@@ -604,7 +604,7 @@ class CoListener(Node):
                             and "files" in cache_data
                             and check_files_exist(cache_data["files"])
                     ):
-                        _log.info(f"upload files not ready, wait for next check...")
+                        _log.info("upload files not ready, wait for next check...")
                         continue
 
                 info = self.create_upload_info_by_json(cache_data)
