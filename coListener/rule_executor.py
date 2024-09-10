@@ -61,7 +61,7 @@ def build_engine_from_rules(
                 continue
             rule_list.extend(vali_rules)
 
-    _log.info(f"check rules succeed, build rule engine!")
+    _log.info("check rules succeed, build rule engine!")
     return Engine(rule_list, should_trigger, trigger_cb)
 
 
@@ -149,8 +149,8 @@ class RuleExecutor:
                 _log.info("fetch rules version from remote server...")
                 rule_version = api_client.get_value().fetch_rules_version()
                 if self.check_rules_version(rule_version):
-                    _log.info(f"rules version has been changed, "
-                              f"fetch new rules from remote server...")
+                    _log.info("rules version has been changed, "
+                              "fetch new rules from remote server...")
                     rules_response, is_success = api_client.get_value().fetch_rules(rule_version)
                     if is_success:
                         _log.info(f"build new rule engine by rules: {rules_response}")
@@ -172,7 +172,7 @@ class RuleExecutor:
                         _log.warn(f"get rules failed, node will try again later, "
                                   f"error info: {rules_response}")
                 else:
-                    _log.info(f"No changes to the rules.")
+                    _log.info("No changes to the rules.")
             except Exception as e:
                 _log.error(f"An error occurred when get rules from remote server! {e}")
 
@@ -213,4 +213,4 @@ class RuleExecutor:
                 self.__moment_fn,
             )
         else:
-            _log.info(f'local cache rules is empty, skip build engine from local.')
+            _log.info('local cache rules is empty, skip build engine from local.')
