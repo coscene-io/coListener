@@ -2,6 +2,7 @@ name: Build
 
 on:
   release:
+    types: [created]
   workflow_dispatch:
 
 jobs:
@@ -16,14 +17,13 @@ jobs:
         with:
           path: src/coListener
 
-      - name: Get release version
-        id: get_version
+      - name: build
         run: |          
           VERSION=${GITHUB_REF#refs/tags/}
-          echo "$VERSION" > version
-
-      - name: build
-        run: |
+          echo -n "$VERSION" > src/coListener/version
+          cat src/coListener/version          
+          sed -i "s|<version>.*</version>|<version>$VERSION</version>|" src/coListener/package.xml
+          cat src/coListener/package.xml
           /ros_entrypoint.sh colcon build --packages-select coListener
 
       - name: zip-artifact

@@ -28,7 +28,7 @@ setup(
     maintainer="fei",
     maintainer_email="fei.gao@coscene.io",
     description="error code listener",
-    license="BSD",
+    license="Apache-2.0 license",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": ["coListener = coListener.main:main"],
