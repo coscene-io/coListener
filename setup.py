@@ -10,7 +10,6 @@ with open('requirements.txt') as f:
 
 with open('version') as f:
     version = f.read()
-    #print(f"current version: {version}")
 
 
 setup(
