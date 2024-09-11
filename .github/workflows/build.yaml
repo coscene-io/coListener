@@ -21,7 +21,9 @@ jobs:
         run: |          
           VERSION=${GITHUB_REF#refs/tags/}
           echo "$VERSION" > src/coListener/version
-          cat src/coListener/version
+          cat src/coListener/version          
+          sed -i "s|<version>.*</version>|<version>$NEW_VERSION</version>|" src/coListener/package.xml
+          cat src/coListener/package.xml
           /ros_entrypoint.sh colcon build --packages-select coListener
 
       - name: zip-artifact
