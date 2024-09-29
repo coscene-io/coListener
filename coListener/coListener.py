@@ -196,7 +196,7 @@ class CoListener(Node):
             self.get_parameter("error_code_topic").get_parameter_value().string_value
         )
 
-        self.declare_parameter("waiting_data_minutes", 10)
+        self.declare_parameter("waiting_data_minutes", 60)
         self.waiting_minutes = (
             self.get_parameter("waiting_data_minutes")
             .get_parameter_value()
@@ -216,9 +216,9 @@ class CoListener(Node):
         _log.info(
             f"[node params] bag_storage_path: {self.bag_storage_path}, "
             f"error_code_topic: {self.error_code_topic}, "
-            f"waiting_data_minutes: {self.waiting_minutes},"
-            f"use_service: {self.use_service},"
-            f"cos_agent_path: {cos_agent_path},"
+            f"waiting_data_minutes: {self.waiting_minutes}, "
+            f"use_service: {self.use_service}, "
+            f"cos_agent_path: {cos_agent_path}, "
             f"version: {self.version}"
         )
 
@@ -550,9 +550,13 @@ class CoListener(Node):
             json.dump(info.to_dict(), fp, indent=4)
 
     def _collect_bag_files(self, trigger_time, cache_data):
-        bag_interval_minutes = 2
-        bags_to_upload = []
         bag_files = []
+        bags_to_upload = []
+        bag_interval_minutes = 2
+
+        if not os.path.exists(self.bag_storage_path):
+            return False, bags_to_upload
+
         files = os.listdir(self.bag_storage_path)
         for bag_file in files:
             bag_full_path = os.path.join(self.bag_storage_path, bag_file)
@@ -609,9 +613,13 @@ class CoListener(Node):
 
     def _collect_log_files(self):
         log_files = []
+        logs_to_upload = []
         log_directory = os.path.join(
             self.log_storage_path, datetime.datetime.now().strftime("%Y%m%d")
         )
+
+        if not os.path.exists(log_directory):
+            return logs_to_upload
 
         for node_name in os.listdir(log_directory):
             node_log_dir = os.path.join(log_directory, node_name)
@@ -653,7 +661,6 @@ class CoListener(Node):
                 if file_to_update != "":
                     log_files.append(file_to_update)
 
-        logs_to_upload = []
         for log_file in log_files:
             logs_to_upload.append(
                 {

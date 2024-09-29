@@ -91,8 +91,9 @@ class RestApiClient:
             for project in projects:
                 project_name = str(project["name"])
 
-                version_url = (f"{self.__api_url}/dataplatform/v1alpha2/"
-                               f"{project_name}/diagnosisRule/metadata")
+                version_url = (
+                    "{self.__api_url}/dataplatform/v1alpha2/{project_name}/diagnosisRule/metadata"
+                )
                 ver = self._get_response(version_url, {}).get("currentVersion", -1)
                 rules_version[project_name] = ver
             return rules_version

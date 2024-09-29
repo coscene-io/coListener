@@ -22,7 +22,7 @@ def generate_launch_description():
     log_storage_path = "/home/cos/files/logs"
     error_code_topic = "/error_code"
     use_service = False
-    waiting_data_minutes = 60
+    waiting_data_minutes = 10
 
     return LaunchDescription(
         [
