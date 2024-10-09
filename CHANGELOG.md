@@ -1,3 +1,8 @@
+## VERSION: 1.1.0
+
+* 新增log上传功能
+* 修正"规则版本检测" 中的bug 
+* code format
 
 ## VERSION： 1.0.0
 
