@@ -30,19 +30,17 @@ class FixedLengthFileNameFormatter(logging.Formatter):
             filename = filename.rjust(self.fixed_length)  # 补空格
         record.filename = filename
 
-        if record.levelname == 'WARNING':
-            record.levelname = ' WARN'
-        if record.levelname == 'INFO':
-            record.levelname = ' INFO'
+        if record.levelname == "WARNING":
+            record.levelname = " WARN"
+        if record.levelname == "INFO":
+            record.levelname = " INFO"
         return super().format(record)
 
 
-LOGGING_FORMAT = (
-    "[%(levelname)s] [%(filename)s, line: %(lineno)04d]: %(message)s"
-)
+LOGGING_FORMAT = "[%(levelname)s] [%(filename)s, line: %(lineno)04d]: %(message)s"
 logger = logging.getLogger("coListener")
 logger.setLevel(logging.DEBUG)
 
-journal_handler = JournalHandler(SYSLOG_IDENTIFIER='coListener')
+journal_handler = JournalHandler(SYSLOG_IDENTIFIER="coListener")
 journal_handler.setFormatter(FixedLengthFileNameFormatter(fmt=LOGGING_FORMAT))
 logger.addHandler(journal_handler)

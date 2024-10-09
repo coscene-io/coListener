@@ -22,19 +22,21 @@ from requests.auth import HTTPBasicAuth
 from coListener.logger import logger as _log
 
 
-class RestApiClient():
+class RestApiClient:
     def __init__(self):
-        self.__api_url = ''
-        self.__token = ''
-        self.__device_name = ''
+        self.__api_url = ""
+        self.__token = ""
+        self.__device_name = ""
 
         config_path = os.path.expanduser("~/.config/cos/config.yaml")
         if os.path.exists(config_path):
             with open(config_path, "r") as config_file:
                 config = yaml.safe_load(config_file)
-                self.__api_url = config['api']['server_url']
+                self.__api_url = config["api"]["server_url"]
 
-        client_state_path = os.path.expanduser("~/.local/state/cos/api_client.state.json")
+        client_state_path = os.path.expanduser(
+            "~/.local/state/cos/api_client.state.json"
+        )
         if os.path.exists(client_state_path):
             with open(client_state_path, "r") as client_cfg:
                 client_state = json.load(client_cfg)
@@ -52,11 +54,13 @@ class RestApiClient():
             url=url,
             params=params,
             headers=self.__request_headers,
-            auth=self.__basic_auth
+            auth=self.__basic_auth,
         )
         if response.status_code != 200:
-            _log.error(f"get response from {url} failed, "
-                       f"response code: {response.status_code}, message: {response.text}")
+            _log.error(
+                f"get response from {url} failed, "
+                f"response code: {response.status_code}, message: {response.text}"
+            )
             return {}
         return response.json()
 
@@ -65,26 +69,31 @@ class RestApiClient():
             url=url,
             json=payload,
             headers=self.__request_headers,
-            auth=self.__basic_auth
+            auth=self.__basic_auth,
         )
         if response.status_code != 200:
-            _log.error(f"get response from {url} failed, "
-                       f"response code: {response.status_code}, message: {response.text}")
+            _log.error(
+                f"get response from {url} failed, "
+                f"response code: {response.status_code}, message: {response.text}"
+            )
             return {}
         return response.json()
 
     def fetch_rules_version(self) -> Dict[str, int]:
         rules_version = {}
         try:
-            url = f"{self.__api_url}/dataplatform/v1alpha1/{self.__device_name}/projects"
+            url = (
+                f"{self.__api_url}/dataplatform/v1alpha1/{self.__device_name}/projects"
+            )
             response = self._get_response(url, {"pageSize": 1000})
             projects = response.get("deviceProjects", [])
 
             for project in projects:
                 project_name = str(project["name"])
 
-                version_url = \
-                    f"{self.__api_url}/dataplatform/v1alpha2/{project_name}/diagnosisRule/metadata"
+                version_url = (
+                    "{self.__api_url}/dataplatform/v1alpha2/{project_name}/diagnosisRule/metadata"
+                )
                 ver = self._get_response(version_url, {}).get("currentVersion", -1)
                 rules_version[project_name] = ver
             return rules_version
@@ -95,7 +104,9 @@ class RestApiClient():
         try:
             device_rules = []
             for project, ver in projects.items():
-                rule_url = f"{self.__api_url}/dataplatform/v1alpha2/{project}/diagnosisRules"
+                rule_url = (
+                    f"{self.__api_url}/dataplatform/v1alpha2/{project}/diagnosisRules"
+                )
                 rules = self._get_response(rule_url, {}).get("diagnosisRules", [])
 
                 device_rules.append(
@@ -116,13 +127,15 @@ class RestApiClient():
             payload = {
                 "diagnosis_rule": diagnosis_rule,
                 "hit": hit,
-                "device": self.__device_name if device is None else device
+                "device": self.__device_name if device is None else device,
             }
             return self._post_response(url, payload).get("count", 0), True
         except Exception as e:
             return str(e), False
 
-    def rules_triggered(self, diagnosis_rule, hit, upload, device=None) -> Tuple[str, bool]:
+    def rules_triggered(
+        self, diagnosis_rule, hit, upload, device=None
+    ) -> Tuple[str, bool]:
         try:
             url = f"{self.__api_url}/dataplatform/v1alpha2/{diagnosis_rule.get('name', '')}:hit"
             payload = {

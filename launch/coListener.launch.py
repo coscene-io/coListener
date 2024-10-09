@@ -18,7 +18,8 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    bag_storage_path = "/cos/files"
+    bag_storage_path = "/home/cos/files/bags"
+    log_storage_path = "/home/cos/files/logs"
     error_code_topic = "/error_code"
     use_service = False
     waiting_data_minutes = 60
@@ -33,6 +34,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "bag_storage_path": bag_storage_path,
+                        "log_storage_path": log_storage_path,
                         "error_code_topic": error_code_topic,
                         "use_service": use_service,
                         "waiting_data_minutes": waiting_data_minutes,

@@ -20,7 +20,9 @@ from coListener.logger import logger as _log
 
 def main(args=None):
     rclpy.init(args=args)
-    _log.info("***************************************************************************")
+    _log.info(
+        "***************************************************************************"
+    )
     _log.info(f"coListener node args: {args}")
 
     node = CoListener()

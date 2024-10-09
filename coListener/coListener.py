@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 
 import appdirs
 import datetime
@@ -41,8 +42,14 @@ cos_agent_path = os.path.expanduser("~/.local") + "/bin/cos"
 
 
 class TaskInfo:
-    def __init__(self, title: str, description: str, assignee: str,
-                 record_name: str, sync_task: bool):
+    def __init__(
+        self,
+        title: str,
+        description: str,
+        assignee: str,
+        record_name: str,
+        sync_task: bool,
+    ):
         self.title = title
         self.description = description
         self.assignee = assignee
@@ -61,12 +68,12 @@ class TaskInfo:
 
 class MomentInfo:
     def __init__(
-            self,
-            title: str,
-            description: str,
-            timestamp: int,
-            duration: int,
-            task: TaskInfo,
+        self,
+        title: str,
+        description: str,
+        timestamp: int,
+        duration: int,
+        task: TaskInfo,
     ):
         self.title = title
         self.description = description
@@ -86,18 +93,18 @@ class MomentInfo:
 
 class UploadFileInfo:
     def __init__(
-            self,
-            uploaded: bool = False,
-            skipped: bool = False,
-            event_code: str = "" or None,
-            project_name: str = "",
-            timestamp: int = 0,
-            labels: List[str] = None,
-            record: Dict = None,
-            moments: List[MomentInfo] = None,
-            task: Dict = None,
-            files: List = None,
-            file_infos: List = None,
+        self,
+        uploaded: bool = False,
+        skipped: bool = False,
+        event_code: str = "" or None,
+        project_name: str = "",
+        timestamp: int = 0,
+        labels: List[str] = None,
+        record: Dict = None,
+        moments: List[MomentInfo] = None,
+        task: Dict = None,
+        files: List = None,
+        file_infos: List = None,
     ):
         if labels is None:
             labels = []
@@ -174,9 +181,14 @@ class CoListener(Node):
         self.merge_cache_dir = appdirs.user_cache_dir() + "/cos/coListener/merge_cache/"
         self.upload_info_cache_dir = appdirs.user_state_dir() + "/cos/records/"
 
-        self.declare_parameter("bag_storage_path", "/cos/files")
+        self.declare_parameter("bag_storage_path", "/home/cos/files/bags")
         self.bag_storage_path = (
             self.get_parameter("bag_storage_path").get_parameter_value().string_value
+        )
+
+        self.declare_parameter("log_storage_path", "/home/cos/files/logs")
+        self.log_storage_path = (
+            self.get_parameter("log_storage_path").get_parameter_value().string_value
         )
 
         self.declare_parameter("error_code_topic", "/error_code")
@@ -186,7 +198,9 @@ class CoListener(Node):
 
         self.declare_parameter("waiting_data_minutes", 60)
         self.waiting_minutes = (
-            self.get_parameter("waiting_data_minutes").get_parameter_value().integer_value
+            self.get_parameter("waiting_data_minutes")
+            .get_parameter_value()
+            .integer_value
         )
 
         self.declare_parameter("use_service", False)
@@ -195,16 +209,16 @@ class CoListener(Node):
         )
 
         package_share_directory = os.path.dirname(__file__)
-        version_file_path = os.path.join(package_share_directory, 'version')
+        version_file_path = os.path.join(package_share_directory, "version")
         with open(version_file_path) as f:
             self.version = f.read()
 
         _log.info(
             f"[node params] bag_storage_path: {self.bag_storage_path}, "
             f"error_code_topic: {self.error_code_topic}, "
-            f"waiting_data_minutes: {self.waiting_minutes},"
-            f"use_service: {self.use_service},"
-            f"cos_agent_path: {cos_agent_path},"
+            f"waiting_data_minutes: {self.waiting_minutes}, "
+            f"use_service: {self.use_service}, "
+            f"cos_agent_path: {cos_agent_path}, "
             f"version: {self.version}"
         )
 
@@ -247,12 +261,14 @@ class CoListener(Node):
             partial(self.should_trigger),
             partial(self.actions_run_ended),
             self.trigger_uuid,
-            self.client_api
+            self.client_api,
         )
 
     def should_trigger(self, project_name: str, rule_spec: dict, hit):
         self.trigger_uuid["uuid"] = str(uuid.uuid4())
-        _log.info(f"{self.trigger_uuid['uuid']} RULES TRIGGERED !!! {rule_spec['when']}")
+        _log.info(
+            f"{self.trigger_uuid['uuid']} RULES TRIGGERED !!! {rule_spec['when']}"
+        )
 
         if not hit.get("uploadLimit", ""):
             return True
@@ -267,10 +283,13 @@ class CoListener(Node):
         }
         upload_limit = hit["uploadLimit"]
         if upload_limit.get("device", ""):
-            device_count, is_success = (
-                self.client_api.get_value().rules_trigger_count(proj_rule_spec["name"], hit))
+            device_count, is_success = self.client_api.get_value().rules_trigger_count(
+                proj_rule_spec["name"], hit
+            )
             if is_success:
-                _log.info(f"rules has been triggered {device_count} times in this device.")
+                _log.info(
+                    f"rules has been triggered {device_count} times in this device."
+                )
                 if device_count >= upload_limit["device"]["times"]:
                     _log.info(
                         f"device triggered count: {device_count},"
@@ -278,13 +297,18 @@ class CoListener(Node):
                     )
                     return False
             else:
-                _log.warn(f"get rules device-trigger count failed, because: {device_count}.")
+                _log.warn(
+                    f"get rules device-trigger count failed, because: {device_count}."
+                )
 
         if upload_limit.get("global", ""):
-            global_count, is_success = (
-                self.client_api.get_value().rules_trigger_count(proj_rule_spec["name"], hit, ""))
+            global_count, is_success = self.client_api.get_value().rules_trigger_count(
+                proj_rule_spec["name"], hit, ""
+            )
             if is_success:
-                _log.info(f"rules has been triggered {global_count} times in global scope.")
+                _log.info(
+                    f"rules has been triggered {global_count} times in global scope."
+                )
                 if global_count >= upload_limit["global"]["times"]:
                     _log.info(
                         f"global triggered count: {global_count},"
@@ -292,7 +316,9 @@ class CoListener(Node):
                     )
                     return False
             else:
-                _log.warn(f"get rules global-trigger count failed, because: {device_count}.")
+                _log.warn(
+                    f"get rules global-trigger count failed, because: {device_count}."
+                )
 
         return True
 
@@ -306,7 +332,9 @@ class CoListener(Node):
                 }
             ],
         }
-        self.client_api.get_value().rules_triggered(project_rule_spec, hit, action_triggered)
+        self.client_api.get_value().rules_triggered(
+            project_rule_spec, hit, action_triggered
+        )
 
         if self.use_service:
             self.send_request(
@@ -328,16 +356,16 @@ class CoListener(Node):
                     json.dump(json_data, file, indent=4)
 
     def create_moment(
-            self,
-            title: str,
-            description: str,
-            timestamp: float,
-            create_task: bool,
-            sync_task: bool,
-            trigger_obj,
-            start_time: float,
-            assign_to: Optional[str],
-            custom_fields: str,
+        self,
+        title: str,
+        description: str,
+        timestamp: float,
+        create_task: bool,
+        sync_task: bool,
+        trigger_obj,
+        start_time: float,
+        assign_to: Optional[str],
+        custom_fields: str,
     ):
         _log.info(f"{trigger_obj['uuid']} action - create moment: {title}")
         cache_file = f"{self.merge_cache_dir}{trigger_obj['uuid']}"
@@ -364,20 +392,22 @@ class CoListener(Node):
             json.dump(json_data, fp, indent=4)
 
     def upload_file(
-            self,
-            before: int,
-            title: str,
-            description: str,
-            labels: List,
-            extra_files: List,
-            storage_dir: Path,
-            project_name: str,
-            trigger_ts: float,
-            trigger_obj,
-            after=0,
+        self,
+        before: int,
+        title: str,
+        description: str,
+        labels: List,
+        extra_files: List,
+        storage_dir: Path,
+        project_name: str,
+        trigger_ts: float,
+        trigger_obj,
+        after=0,
     ):
         trigger_time = datetime.datetime.fromtimestamp(trigger_ts)
-        _log.info(f"{trigger_obj['uuid']} trigger time: {trigger_ts} ( {trigger_time} ) .")
+        _log.info(
+            f"{trigger_obj['uuid']} trigger time: {trigger_ts} ( {trigger_time} ) ."
+        )
         _log.info(
             f"{trigger_obj['uuid']} action - upload file: coListener will collect bags "
             f"which time range is {before} minutes ago "
@@ -435,16 +465,20 @@ class CoListener(Node):
             json.dump(json_data, fp, indent=4)
 
     def error_code_callback(self, msg):
-        json_str = msg.data
-        _log.info(f"received message: {json_str}")
+        try:
+            json_str = msg.data
+            _log.info(f"received message: {json_str}")
 
-        json_obj = json.loads(json_str)
-        self.rule_engine.consume_msg(
-            self.error_code_topic, json_obj, datetime.datetime.now().timestamp(), ""
-        )
+            json_obj = json.loads(json_str)
+            self.rule_engine.consume_msg(
+                self.error_code_topic, json_obj, datetime.datetime.now().timestamp(), ""
+            )
+        except Exception as e:
+            _log.info(f"catch exception when processing topic message: {e}")
 
-    def create_upload_info_by_json(self, cache_data: dict,
-                                   append_files: List or None = None) -> UploadFileInfo:
+    def create_upload_info_by_json(
+        self, cache_data: dict, append_files: List or None = None
+    ) -> UploadFileInfo:
         info = UploadFileInfo()
         info.uploaded = False
         info.skipped = False
@@ -454,7 +488,8 @@ class CoListener(Node):
         info.labels = cache_data["labels"]
         info.record = {
             "title": cache_data["title"],
-            "description": cache_data["description"] + f"\n\ncoListener version: {self.version}",
+            "description": cache_data["description"]
+            + f"\n\ncoListener version: {self.version}",
         }
         if append_files is not None:
             info.file_infos.extend(append_files)
@@ -478,23 +513,33 @@ class CoListener(Node):
                         task=TaskInfo(
                             title="",
                             description="",
-                            assignee=moment["assign_to"] if "assign_to" in moment and moment[
-                                "assign_to"] is not None else "",
+                            assignee=(
+                                moment["assign_to"]
+                                if "assign_to" in moment
+                                and moment["assign_to"] is not None
+                                else ""
+                            ),
                             record_name="",
-                            sync_task=moment["sync_task"] if "sync_task" in moment and moment[
-                                "sync_task"] is not None else False
+                            sync_task=(
+                                moment["sync_task"]
+                                if "sync_task" in moment
+                                and moment["sync_task"] is not None
+                                else False
+                            ),
                         ),
                     )
                 )
         return info
 
-    def _write_upload_info_to_cos_state(self, trigger_time: datetime, info: UploadFileInfo):
+    def _write_upload_info_to_cos_state(
+        self, trigger_time: datetime, info: UploadFileInfo
+    ):
         milliseconds = trigger_time.microsecond // 1000
         state_dir = (
-                self.upload_info_cache_dir
-                + trigger_time.astimezone(pytz.utc).strftime("%Y-%m-%d-%H-%M-%S_")
-                + str(milliseconds)
-                + "/.cos/"
+            self.upload_info_cache_dir
+            + trigger_time.astimezone(pytz.utc).strftime("%Y-%m-%d-%H-%M-%S_")
+            + str(milliseconds)
+            + "/.cos/"
         )
 
         _log.info(f"write json to {state_dir + 'state.json'}")
@@ -504,10 +549,14 @@ class CoListener(Node):
         with open(state_dir + "state.json", "w", encoding="utf8") as fp:
             json.dump(info.to_dict(), fp, indent=4)
 
-    def _check_and_upload_files(self):
-        _log.info("check and upload files...")
-        bag_interval_minutes = 2
+    def _collect_bag_files(self, trigger_time, cache_data):
         bag_files = []
+        bags_to_upload = []
+        bag_interval_minutes = 2
+
+        if not os.path.exists(self.bag_storage_path):
+            return False, bags_to_upload
+
         files = os.listdir(self.bag_storage_path)
         for bag_file in files:
             bag_full_path = os.path.join(self.bag_storage_path, bag_file)
@@ -515,11 +564,119 @@ class CoListener(Node):
                 bag_files.append(os.path.abspath(bag_full_path))
         if len(bag_files) == 0:
             _log.info(f"can't find any bag files in {self.bag_storage_path}")
-            return
-
+            return False, bags_to_upload
         bag_files.sort()
 
+        end_bag_datetime = datetime.datetime.strptime(
+            # bag_yyyy_mm_dd_hhmmss.tar.gz
+            os.path.basename(bag_files[-1])[4:-7],
+            "%Y_%m_%d_%H%M%S",
+        )
+        needed_time = trigger_time + datetime.timedelta(minutes=cache_data["after"])
+        limit_time = trigger_time + datetime.timedelta(minutes=self.waiting_minutes)
+        current_time = datetime.datetime.now()
+
+        if end_bag_datetime < needed_time and limit_time > current_time:
+            _log.info(
+                f"The time condition is not met, {needed_time} was needed, "
+                + f"but latest bag time is {end_bag_datetime}, skip."
+            )
+            return False, bags_to_upload
+
+        if limit_time < current_time:
+            cache_data["description"] += (
+                f"[ {self.waiting_minutes} minutes after the "
+                f"error code was triggered,"
+                f" data collection was incomplete, maybe you should "
+                f"check the recording node.]"
+            )
+
+        minutes_before = trigger_time - datetime.timedelta(
+            minutes=cache_data["before"] + bag_interval_minutes
+        )
+        minutes_after = trigger_time + datetime.timedelta(minutes=cache_data["after"])
+
+        for bag_file in bag_files:
+            bag_datetime = datetime.datetime.strptime(
+                os.path.basename(bag_file)[4:-7], "%Y_%m_%d_%H%M%S"
+            )
+            if minutes_before < bag_datetime < minutes_after:
+                bags_to_upload.append(
+                    {
+                        "filepath": bag_file,
+                        "filename": os.path.relpath(bag_file, self.bag_storage_path),
+                        "size": None,
+                        "sha256": None,
+                    }
+                )
+        return True, bags_to_upload
+
+    def _collect_log_files(self):
+        log_files = []
+        logs_to_upload = []
+        log_directory = os.path.join(
+            self.log_storage_path, datetime.datetime.now().strftime("%Y%m%d")
+        )
+
+        if not os.path.exists(log_directory):
+            return logs_to_upload
+
+        for node_name in os.listdir(log_directory):
+            node_log_dir = os.path.join(log_directory, node_name)
+            if node_name == "edge_gateway":
+                for node_log in os.listdir(node_log_dir):
+                    if not node_log.endswith(".log.gz"):
+                        log_files.append(os.path.join(node_log_dir, node_log))
+            elif node_name == "edge_ui":
+                for node_log in os.listdir(node_log_dir):
+                    log_files.append(os.path.join(node_log_dir, node_log))
+            elif node_name == "navigation":
+                # 2024-09-23-09-54-49-199047-RK3588-3810
+                max_datetime = datetime.datetime.min
+                dir_to_update = ""
+                for node_log in os.listdir(node_log_dir):
+                    match = re.search(
+                        r"(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})", node_log
+                    )
+                    if match:
+                        file_date_time = datetime.datetime.strptime(
+                            match.group(1), "%Y-%m-%d-%H-%M-%S"
+                        )
+                        if file_date_time > max_datetime:
+                            dir_to_update = os.path.join(node_log_dir, node_log)
+                log_files.append(os.path.join(dir_to_update, "launch.log"))
+            else:
+                max_datetime = datetime.datetime.min
+                file_to_update = ""
+                for node_log in os.listdir(node_log_dir):
+                    if node_log.endswith(".INFO") or node_log.endswith(".WARNING"):
+                        log_files.append(os.path.join(node_log_dir, node_log))
+                    match = re.search(rf"{node_name}(\d{{8}}-\d{{6}})", node_log)
+                    if match:
+                        file_date_time = datetime.datetime.strptime(
+                            match.group(1), "%Y%m%d-%H%M%S"
+                        )
+                        if file_date_time > max_datetime:
+                            file_to_update = os.path.join(node_log_dir, node_log)
+                if file_to_update != "":
+                    log_files.append(file_to_update)
+
+        for log_file in log_files:
+            logs_to_upload.append(
+                {
+                    "filepath": log_file,
+                    "filename": os.path.relpath(log_file, self.log_storage_path),
+                    "size": None,
+                    "sha256": None,
+                }
+            )
+
+        return logs_to_upload
+
+    def _check_and_upload_files(self):
+        _log.info("check and upload files...")
         for cache_file in os.listdir(self.merge_cache_dir):
+            _log.info(f"find cache file: {cache_file}")
             full_path = os.path.join(self.merge_cache_dir, cache_file)
             if not os.path.isfile(full_path):
                 continue
@@ -529,58 +686,22 @@ class CoListener(Node):
                 cache_data = json.load(file)
 
             if not (cache_data["completed"]):
-                _log.info(f"cache file [{cache_file}] not ready, wait for next check...")
+                _log.info(
+                    f"cache file [{cache_file}] not ready, wait for next check..."
+                )
                 continue
 
             trigger_time = datetime.datetime.fromtimestamp(cache_data["trigger_time"])
 
-            end_bag_datetime = datetime.datetime.strptime(
-                # bag_yyyy_mm_dd_hhmmss.tar.gz
-                os.path.basename(bag_files[-1])[4:-7],
-                "%Y_%m_%d_%H%M%S",
-            )
-            needed_time = trigger_time + datetime.timedelta(minutes=cache_data["after"])
-            limit_time = trigger_time + datetime.timedelta(minutes=self.waiting_minutes)
-            current_time = datetime.datetime.now()
-
-            if end_bag_datetime < needed_time and limit_time < current_time:
-                _log.info(
-                    f"The time condition is not met, {needed_time} was needed, "
-                    + f"but latest bag time is {end_bag_datetime}, skip."
-                )
+            is_ok, files_to_upload = self._collect_bag_files(trigger_time, cache_data)
+            if not is_ok:
+                _log.info("the files that need to be uploaded are not yet ready.")
                 continue
 
-            if limit_time < current_time:
-                cache_data["description"] += (f"[ {self.waiting_minutes} minutes after the "
-                                              f"error code was triggered,"
-                                              f" data collection was incomplete, please "
-                                              f"check the recording node.]")
+            logs_to_upload = self._collect_log_files()
+            files_to_upload.extend(logs_to_upload)
 
-            minutes_before = trigger_time - datetime.timedelta(
-                minutes=cache_data["before"] + bag_interval_minutes
-            )
-            minutes_after = trigger_time + datetime.timedelta(
-                minutes=cache_data["after"] + bag_interval_minutes
-            )
-            bags_to_upload = []
-            for bag_file in bag_files:
-                bag_datetime = datetime.datetime.strptime(
-                    os.path.basename(bag_file)[4:-7], "%Y_%m_%d_%H%M%S"
-                )
-
-                if minutes_before < bag_datetime < minutes_after:
-                    bags_to_upload.append(
-                        {
-                            "filepath": bag_file,
-                            "filename": os.path.relpath(
-                                bag_file, self.bag_storage_path
-                            ),
-                            "size": None,
-                            "sha256": None,
-                        }
-                    )
-
-            info = self.create_upload_info_by_json(cache_data, bags_to_upload)
+            info = self.create_upload_info_by_json(cache_data, files_to_upload)
 
             self._write_upload_info_to_cos_state(trigger_time, info)
             _log.info(f"remove {full_path}")
@@ -600,9 +721,9 @@ class CoListener(Node):
                 with open(full_path, "r") as file:
                     cache_data = json.load(file)
                     if not (
-                            cache_data["completed"]
-                            and "files" in cache_data
-                            and check_files_exist(cache_data["files"])
+                        cache_data["completed"]
+                        and "files" in cache_data
+                        and check_files_exist(cache_data["files"])
                     ):
                         _log.info("upload files not ready, wait for next check...")
                         continue
@@ -618,5 +739,5 @@ class CoListener(Node):
                 os.remove(full_path)
 
     def _reload_config(self):
-        _log.info('reload config')
+        _log.info("reload config")
         self.client_api.set_value(RestApiClient())

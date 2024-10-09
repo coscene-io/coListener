@@ -18,7 +18,7 @@ import os
 import threading
 import time
 from functools import partial
-from typing import List, Tuple
+from typing import List
 from ruleengine.dsl.validation.config_validator import validate_config
 from ruleengine.engine import Engine, DiagnosisItem
 
@@ -29,7 +29,7 @@ cos_cache_path = os.path.expanduser("~/.cache") + "/cos/coListener"
 
 
 def build_engine_from_rules(
-        rules: List, should_trigger, trigger_cb, trigger_obj, upload_fn=None, moment_fn=None
+    rules: List, should_trigger, trigger_cb, trigger_obj, upload_fn=None, moment_fn=None
 ):
     _log.info("check rules...")
     rule_list = []
@@ -67,13 +67,13 @@ def build_engine_from_rules(
 
 class RuleExecutor:
     def __init__(
-            self,
-            upload_fn: partial,
-            moment_fn: partial,
-            should_trigger,
-            trigger_cb,
-            trigger_obj,
-            api_client: SharedClientAPI
+        self,
+        upload_fn: partial,
+        moment_fn: partial,
+        should_trigger,
+        trigger_cb,
+        trigger_obj,
+        api_client: SharedClientAPI,
     ):
         self.__upload_fn = upload_fn
         self.__moment_fn = moment_fn
@@ -109,38 +109,28 @@ class RuleExecutor:
             self.__engine.consume_next(DiagnosisItem(topic, msg, ts, msgtype))
         self.__lock.release()
 
-    def check_rules_version_old(self, rules_str: str) -> Tuple[list, bool]:
-        rules_json = json.loads(rules_str)
-
-        rules = []
-        need_update = False
-
-        if len(rules_json) != len(self.rules_dict):
-            need_update = True
-            self.rules_dict.clear()
-
-        for rule in rules_json:
-            rules.extend(rule["rules"])
-
-            version = rule["version"]
-            project_name = rule["project_name"]
-            if project_name not in self.rules_dict:
-                self.rules_dict[project_name] = version
-                need_update = True
-            else:
-                if version != self.rules_dict[project_name]:
-                    self.rules_dict[project_name] = version
-                    need_update = True
-
-        return rules, need_update
-
     def check_rules_version(self, rules: dict) -> bool:
+        if len(rules) == 0:
+            _log.info("remote server return no rules, skip this update.")
+            return False
+
+        if len(rules) != len(self.rules_dict):
+            _log.info(
+                "inconsistency in the amount of rules between remote and local, update rules"
+            )
+            return True
+
         for project, version in rules.items():
             if project not in self.rules_dict or version != self.rules_dict[project]:
                 self.rules_dict[project] = version
+                _log.info(
+                    f"project {project} version {version}, "
+                    f"which in cache is {self.rules_dict[project]}"
+                )
                 return True
-            else:
-                return False
+
+        _log.info("check finished, no rules need to update")
+        return False
 
     def update_rules(self, api_client: SharedClientAPI):
         while True:
@@ -149,9 +139,10 @@ class RuleExecutor:
                 _log.info("fetch rules version from remote server...")
                 rule_version = api_client.get_value().fetch_rules_version()
                 if self.check_rules_version(rule_version):
-                    _log.info("rules version has been changed, "
-                              "fetch new rules from remote server...")
-                    rules_response, is_success = api_client.get_value().fetch_rules(rule_version)
+                    _log.info("fetch new rules from remote server...")
+                    rules_response, is_success = api_client.get_value().fetch_rules(
+                        rule_version
+                    )
                     if is_success:
                         _log.info(f"build new rule engine by rules: {rules_response}")
                         self._write_rules_to_cache(rules_response)
@@ -169,10 +160,10 @@ class RuleExecutor:
                         )
                         self.__lock.release()
                     else:
-                        _log.warn(f"get rules failed, node will try again later, "
-                                  f"error info: {rules_response}")
-                else:
-                    _log.info("No changes to the rules.")
+                        _log.warn(
+                            f"get rules failed, node will try again later, "
+                            f"error info: {rules_response}"
+                        )
             except Exception as e:
                 _log.error(f"An error occurred when get rules from remote server! {e}")
 
@@ -199,7 +190,7 @@ class RuleExecutor:
     def _build_engine_from_cache(self) -> None:
         cache_rules = self._read_rules_from_cache()
         if cache_rules != "":
-            _log.info(f'build engine from local cache: {cache_rules}')
+            _log.info(f"build engine from local cache: {cache_rules}")
             rules = []
             for rule in json.loads(cache_rules):
                 rules.extend(rule["rules"])
@@ -213,4 +204,4 @@ class RuleExecutor:
                 self.__moment_fn,
             )
         else:
-            _log.info('local cache rules is empty, skip build engine from local.')
+            _log.info("local cache rules is empty, skip build engine from local.")
