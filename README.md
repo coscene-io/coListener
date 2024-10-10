@@ -18,7 +18,8 @@
 
   * launch 文件参数及其默认值如下（**请在编译前按照需求进行修改**）：
     ```python
-    bag_storage_path = "/cos/files"    # bag的存储路径
+    bag_storage_path = "/home/cos/files/bags"    # bag的存储路径
+    log_storage_path = "/home/cos/files/logs"    # log的存储路径
     error_code_topic = "/error_code"   # 发布error code的topic
     use_service = False                # 是否调用service进行录包（当前按照False）
     waiting_data_minutes = 60          # 数据检测超时时间（ 若{waiting_data_minutes}分钟后未能收集到全部数据，直接上传已经收集到的数据）
