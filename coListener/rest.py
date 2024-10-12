@@ -97,7 +97,8 @@ class RestApiClient:
                 ver = self._get_response(version_url, {}).get("currentVersion", -1)
                 rules_version[project_name] = ver
             return rules_version
-        except Exception:
+        except Exception as e:
+            _log.error(f"exception in fetch_rules_version: {str(e)}")
             return {}
 
     def fetch_rules(self, projects: Dict) -> Tuple[str, bool]:
@@ -118,6 +119,7 @@ class RestApiClient:
                 )
             return json.dumps(device_rules), True
         except Exception as e:
+            _log.error("exception in fetch_rules: " + str(e))
             return str(e), False
 
     def rules_trigger_count(self, diagnosis_rule, hit, device=None) -> Tuple[any, bool]:
