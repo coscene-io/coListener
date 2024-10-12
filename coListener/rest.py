@@ -92,7 +92,7 @@ class RestApiClient:
                 project_name = str(project["name"])
 
                 version_url = (
-                    "{self.__api_url}/dataplatform/v1alpha2/{project_name}/diagnosisRule/metadata"
+                    f"{self.__api_url}/dataplatform/v1alpha2/{project_name}/diagnosisRule/metadata"
                 )
                 ver = self._get_response(version_url, {}).get("currentVersion", -1)
                 rules_version[project_name] = ver
