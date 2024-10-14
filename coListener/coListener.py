@@ -405,6 +405,7 @@ class CoListener(Node):
         after=0,
     ):
         trigger_time = datetime.datetime.fromtimestamp(trigger_ts)
+        upload_timestamp = datetime.datetime.now()
         _log.info(
             f"{trigger_obj['uuid']} trigger time: {trigger_ts} ( {trigger_time} ) ."
         )
@@ -429,6 +430,7 @@ class CoListener(Node):
         json_data["project_name"] = project_name
         json_data["completed"] = False
         json_data["trigger_time"] = trigger_ts
+        json_data["upload_timestamp"] = upload_timestamp.timestamp()
 
         with open(cache_file, "w", encoding="utf8") as fp:
             json.dump(json_data, fp, indent=4)
@@ -484,7 +486,7 @@ class CoListener(Node):
         info.skipped = False
         info.event_code = None
         info.project_name = cache_data["project_name"]
-        info.timestamp = int(cache_data["trigger_time"] * 1000)
+        info.timestamp = int(cache_data["upload_timestamp"] * 1000)
         info.labels = cache_data["labels"]
         info.record = {
             "title": cache_data["title"],
@@ -675,6 +677,10 @@ class CoListener(Node):
 
     def _check_and_upload_files(self):
         _log.info("check and upload files...")
+        # if reinstall coScout and use --remove_config param, cache directory will be removed.
+        # so, check directory first when use it.
+        if not os.path.exists(self.merge_cache_dir):
+            os.makedirs(self.merge_cache_dir)
         for cache_file in os.listdir(self.merge_cache_dir):
             _log.info(f"find cache file: {cache_file}")
             full_path = os.path.join(self.merge_cache_dir, cache_file)
@@ -692,6 +698,7 @@ class CoListener(Node):
                 continue
 
             trigger_time = datetime.datetime.fromtimestamp(cache_data["trigger_time"])
+            upload_time = datetime.datetime.fromtimestamp(cache_data["upload_timestamp"])
 
             is_ok, files_to_upload = self._collect_bag_files(trigger_time, cache_data)
             if not is_ok:
@@ -703,7 +710,7 @@ class CoListener(Node):
 
             info = self.create_upload_info_by_json(cache_data, files_to_upload)
 
-            self._write_upload_info_to_cos_state(trigger_time, info)
+            self._write_upload_info_to_cos_state(upload_time, info)
             _log.info(f"remove {full_path}")
             os.remove(full_path)
 
@@ -714,6 +721,8 @@ class CoListener(Node):
                     return False
             return True
 
+        if not os.path.exists(self.merge_cache_dir):
+            os.makedirs(self.merge_cache_dir)
         for cache_file in os.listdir(self.merge_cache_dir):
             full_path = os.path.join(self.merge_cache_dir, cache_file)
             if os.path.isfile(full_path):
@@ -730,10 +739,10 @@ class CoListener(Node):
 
                 info = self.create_upload_info_by_json(cache_data)
 
-                trigger_time = datetime.datetime.fromtimestamp(
-                    cache_data["trigger_time"]
+                upload_timestamp = datetime.datetime.fromtimestamp(
+                    cache_data["upload_timestamp"]
                 )
-                self._write_upload_info_to_cos_state(trigger_time, info)
+                self._write_upload_info_to_cos_state(upload_timestamp, info)
 
                 _log.info(f"remove {full_path}")
                 os.remove(full_path)
