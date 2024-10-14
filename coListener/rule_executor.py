@@ -118,6 +118,8 @@ class RuleExecutor:
             _log.info(
                 "inconsistency in the amount of rules between remote and local, update rules"
             )
+            for project, version in rules.items():
+                self.rules_dict[project] = version
             return True
 
         for project, version in rules.items():
