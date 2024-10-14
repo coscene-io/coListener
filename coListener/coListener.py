@@ -698,6 +698,7 @@ class CoListener(Node):
                 continue
 
             trigger_time = datetime.datetime.fromtimestamp(cache_data["trigger_time"])
+            upload_time = datetime.datetime.fromtimestamp(cache_data["upload_timestamp"])
 
             is_ok, files_to_upload = self._collect_bag_files(trigger_time, cache_data)
             if not is_ok:
@@ -709,7 +710,7 @@ class CoListener(Node):
 
             info = self.create_upload_info_by_json(cache_data, files_to_upload)
 
-            self._write_upload_info_to_cos_state(trigger_time, info)
+            self._write_upload_info_to_cos_state(upload_time, info)
             _log.info(f"remove {full_path}")
             os.remove(full_path)
 
@@ -720,6 +721,8 @@ class CoListener(Node):
                     return False
             return True
 
+        if not os.path.exists(self.merge_cache_dir):
+            os.makedirs(self.merge_cache_dir)
         for cache_file in os.listdir(self.merge_cache_dir):
             full_path = os.path.join(self.merge_cache_dir, cache_file)
             if os.path.isfile(full_path):
@@ -736,10 +739,10 @@ class CoListener(Node):
 
                 info = self.create_upload_info_by_json(cache_data)
 
-                trigger_time = datetime.datetime.fromtimestamp(
-                    cache_data["trigger_time"]
+                upload_timestamp = datetime.datetime.fromtimestamp(
+                    cache_data["upload_timestamp"]
                 )
-                self._write_upload_info_to_cos_state(trigger_time, info)
+                self._write_upload_info_to_cos_state(upload_timestamp, info)
 
                 _log.info(f"remove {full_path}")
                 os.remove(full_path)
