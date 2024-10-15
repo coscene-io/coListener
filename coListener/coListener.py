@@ -492,8 +492,8 @@ class CoListener(Node):
         info.record = {
             "title": cache_data["title"],
             "description": cache_data["description"]
-            + f"\n\ncoListener version: {self.version}"
-            + f"trigger time: {triggerTime.strftime('%Y-%m-%d %H:%M:%S.%f')}",
+            + f"\n\n[coListener version: {self.version}, "
+            + f"trigger time: {triggerTime.strftime('%Y-%m-%d %H:%M:%S.%f')}]",
         }
         if append_files is not None:
             info.file_infos.extend(append_files)
