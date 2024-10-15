@@ -19,7 +19,7 @@ import requests
 import yaml
 from typing import Tuple, Dict
 from requests.auth import HTTPBasicAuth
-from coListener.logger import logger as _log
+from coListener.logger import logger as _log, logger
 
 
 class RestApiClient:
@@ -50,11 +50,13 @@ class RestApiClient:
         }
 
     def _get_response(self, url, params):
+        _log.info(f"requesting {url} by GET method")
         response = requests.get(
             url=url,
             params=params,
             headers=self.__request_headers,
             auth=self.__basic_auth,
+            timeout=10,
         )
         if response.status_code != 200:
             _log.error(
@@ -65,11 +67,13 @@ class RestApiClient:
         return response.json()
 
     def _post_response(self, url, payload):
+        _log.info(f"requesting {url} by POST method")
         response = requests.post(
             url=url,
             json=payload,
             headers=self.__request_headers,
             auth=self.__basic_auth,
+            timeout=10,
         )
         if response.status_code != 200:
             _log.error(
