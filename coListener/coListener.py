@@ -317,7 +317,7 @@ class CoListener(Node):
                     return False
             else:
                 _log.warn(
-                    f"get rules global-trigger count failed, because: {device_count}."
+                    f"get rules global-trigger count failed, because: {global_count}."
                 )
 
         return True
@@ -481,6 +481,7 @@ class CoListener(Node):
     def create_upload_info_by_json(
         self, cache_data: dict, append_files: List or None = None
     ) -> UploadFileInfo:
+        triggerTime = datetime.datetime.fromtimestamp(cache_data["trigger_time"])
         info = UploadFileInfo()
         info.uploaded = False
         info.skipped = False
@@ -491,7 +492,8 @@ class CoListener(Node):
         info.record = {
             "title": cache_data["title"],
             "description": cache_data["description"]
-            + f"\n\ncoListener version: {self.version}",
+            + f"\n\n[coListener version: {self.version}, "
+            + f"trigger time: {triggerTime.strftime('%Y-%m-%d %H:%M:%S.%f')}]",
         }
         if append_files is not None:
             info.file_infos.extend(append_files)
@@ -594,9 +596,11 @@ class CoListener(Node):
             )
 
         minutes_before = trigger_time - datetime.timedelta(
-            minutes=cache_data["before"] + bag_interval_minutes
+            minutes=cache_data["before"]
         )
-        minutes_after = trigger_time + datetime.timedelta(minutes=cache_data["after"])
+        minutes_after = trigger_time + datetime.timedelta(
+            minutes=cache_data["after"] + bag_interval_minutes
+        )
 
         for bag_file in bag_files:
             bag_datetime = datetime.datetime.strptime(
@@ -651,14 +655,13 @@ class CoListener(Node):
                 max_datetime = datetime.datetime.min
                 file_to_update = ""
                 for node_log in os.listdir(node_log_dir):
-                    if node_log.endswith(".INFO") or node_log.endswith(".WARNING"):
-                        log_files.append(os.path.join(node_log_dir, node_log))
                     match = re.search(rf"{node_name}(\d{{8}}-\d{{6}})", node_log)
                     if match:
                         file_date_time = datetime.datetime.strptime(
                             match.group(1), "%Y%m%d-%H%M%S"
                         )
-                        if file_date_time > max_datetime:
+                        if file_date_time >= max_datetime:
+                            max_datetime = file_date_time
                             file_to_update = os.path.join(node_log_dir, node_log)
                 if file_to_update != "":
                     log_files.append(file_to_update)
