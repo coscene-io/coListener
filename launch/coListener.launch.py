@@ -18,8 +18,9 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    bag_storage_path = "/home/cos/files/bags"
-    log_storage_path = "/home/cos/files/logs"
+    bag_storage_path = "/home/tyzc/AgiBot/scrubber/record_bag"
+    log_storage_path = "/home/tyzc/AgiBot/scrubber/log"
+
     error_code_topic = "/error_code"
     use_service = False
     waiting_data_minutes = 60

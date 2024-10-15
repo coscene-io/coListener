@@ -50,7 +50,7 @@ class RestApiClient:
         }
 
     def _get_response(self, url, params):
-        _log.info(f"requesting {url} by GET method")
+        _log.debug(f"requesting {url} by GET method")
         response = requests.get(
             url=url,
             params=params,
@@ -64,10 +64,11 @@ class RestApiClient:
                 f"response code: {response.status_code}, message: {response.text}"
             )
             return {}
+        _log.debug(f"requesting {url} by GET method succeed, {response.text}")
         return response.json()
 
     def _post_response(self, url, payload):
-        _log.info(f"requesting {url} by POST method")
+        _log.debug(f"requesting {url} by POST method")
         response = requests.post(
             url=url,
             json=payload,
@@ -81,6 +82,7 @@ class RestApiClient:
                 f"response code: {response.status_code}, message: {response.text}"
             )
             return {}
+        _log.debug(f"requesting {url} by POST method succeed, {response.text}")
         return response.json()
 
     def fetch_rules_version(self) -> Dict[str, int]:

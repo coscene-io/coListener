@@ -169,7 +169,7 @@ class RuleExecutor:
             except Exception as e:
                 _log.error(f"An error occurred when get rules from remote server! {e}")
 
-            waiting_time = 60.0 - (time.time() - start_time)
+            waiting_time = int(60.0 - (time.time() - start_time) + 0.5)
             _log.info(f"update rules ended, wait {waiting_time} secs...")
             if self.__exit_thread_event.wait(waiting_time):
                 break
