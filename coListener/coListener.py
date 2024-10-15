@@ -317,7 +317,7 @@ class CoListener(Node):
                     return False
             else:
                 _log.warn(
-                    f"get rules global-trigger count failed, because: {device_count}."
+                    f"get rules global-trigger count failed, because: {global_count}."
                 )
 
         return True
@@ -598,7 +598,9 @@ class CoListener(Node):
         minutes_before = trigger_time - datetime.timedelta(
             minutes=cache_data["before"]
         )
-        minutes_after = trigger_time + datetime.timedelta(minutes=cache_data["after"])
+        minutes_after = trigger_time + datetime.timedelta(
+            minutes=cache_data["after"] + bag_interval_minutes
+        )
 
         for bag_file in bag_files:
             bag_datetime = datetime.datetime.strptime(
