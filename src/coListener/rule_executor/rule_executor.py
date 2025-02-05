@@ -31,7 +31,7 @@ def build_engine_from_rules(
                 rules,
                 {
                     "upload": lambda rule, _: partial(upload_fn, project_name=project_name, rule=rule, trigger_obj=trigger_obj),
-                    "create_moment": lambda _, each_scope: partial(moment_fn, trigger_obj=trigger_obj, rule_id=rules["id"], code=each_scope.get("code", "")),
+                    "create_moment": lambda rule, each_scope: partial(moment_fn, trigger_obj=trigger_obj, rule_id=rule["id"], code=each_scope.get("code", "")),
                 },
                 project_name,
             )
