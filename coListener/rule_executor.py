@@ -54,8 +54,8 @@ def build_engine_from_rules(
             )
             if not vali_result["success"]:
                 _log.error(
-                    f"Failed to build rule for {project_name} "
-                    f"{json.dumps(rule_list, indent=2, ensure_ascii=False)}"
+                    f"Failed to build rule for {project_name}"
+                    f"{json.dumps(rule, indent=2, ensure_ascii=False)}"
                     f"due to {json.dumps(vali_result, indent=2, ensure_ascii=False)}, skipping"
                 )
                 continue
