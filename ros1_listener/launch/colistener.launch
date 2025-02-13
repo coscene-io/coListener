@@ -1,0 +1,4 @@
+<launch>
+    <param name="~subscribe_topics"  type="yaml" value="['/error_code', '/error_event']"/>
+    <node pkg="colistener" type="colistener" name="colistener" output="screen"/>
+</launch>

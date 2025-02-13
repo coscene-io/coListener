@@ -1,6 +1,0 @@
-requests
-appdirs
-pytz
-pyyaml
-setuptools==45.2.0
-cos-ruleengine==0.1.34
