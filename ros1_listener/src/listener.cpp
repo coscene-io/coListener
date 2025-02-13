@@ -12,7 +12,7 @@ namespace ros1_listener {
 
 const std::set<std::string> Listener::builtin_types_ = {
     "bool", "int8", "uint8", "int16", "uint16", "int32", "uint32",
-    "int64", "uint64", "float32", "float64", "string"
+    "int64", "uint64", "float32", "float64", "string", "time", "duration"
 };
 
 Listener::Listener() : curl_(nullptr), headers_(nullptr)  {
@@ -180,6 +180,8 @@ RosDataType Listener::convert_to_rostype(const std::string& type) {
         return RosDataType::RosDataTypeFloat;
     } else if (type == "float64") {
         return RosDataType::RosDataTypeDouble;
+    } else if (type == "duration" || type == "time") {
+        return RosDataType::RosDataTypeTime;
     } else {
         return RosDataType::RosDataTypeMessage;
     }
@@ -422,6 +424,19 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
             std::memcpy(&num_value, buffer + offset, sizeof(double));
             offset += sizeof(double);
             value = num_value;
+            break;
+        }
+        case RosDataType::RosDataTypeTime: {
+            uint32_t secs, nsecs;
+            std::memcpy(&secs, buffer + offset, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+            std::memcpy(&nsecs, buffer + offset, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+            
+            nlohmann::json time_obj;
+            time_obj["secs"] = secs;
+            time_obj["nsecs"] = nsecs;
+            value = time_obj;
             break;
         }
         default:

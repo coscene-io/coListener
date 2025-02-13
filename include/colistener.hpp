@@ -47,7 +47,10 @@ enum class RosDataType
     RosDataTypeString = 16,
     RosDataTypeWString = 17,
     RosDataTypeMessage = 18,
-    RosDataTypeUnknown = 19,
+    // ros1 only
+    RosDataTypeTime = 19,
+
+    RosDataTypeUnknown = 99,
 };
 
 struct MessageField {
