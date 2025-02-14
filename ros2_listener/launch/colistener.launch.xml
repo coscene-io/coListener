@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="colistener" exec="colistener" name="colistener" output="screen">
+        <param name="subscribe_topics" value="['/error_code', '/error_event']"/>
+    </node>
+</launch> 

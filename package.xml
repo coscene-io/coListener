@@ -1,25 +1,28 @@
 <?xml version="1.0"?>
-<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>coListener</name>
-  <version>1.1.3</version>
-  <description>error code listener</description>
-  <maintainer email="fei.gao@coscene.io">coffee</maintainer>
-  <license>Apache-2.0 license</license>
+  <name>colistener</name>
+  <version>0.0.1</version>
+  <description>Topic listener</description>
+  <maintainer email="coscene@coscene.io">fei</maintainer>
+  <license>Apache License 2.0</license>
 
-  <!-- Other dependencies -->
-  <exec_depend>rclpy</exec_depend>
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
 
-  <!-- Python dependencies -->
-  <exec_depend>python3-appdirs</exec_depend>
-  <exec_depend>python3-requests</exec_depend>
+  <depend condition="$ROS_VERSION == 1">roscpp</depend>
+  <depend condition="$ROS_VERSION == 1">roslib</depend>
+  <depend condition="$ROS_VERSION == 1">topic_tools</depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
+  <depend condition="$ROS_VERSION == 2">ament_index_cpp</depend>
+  <depend condition="$ROS_VERSION == 2">rclcpp</depend>
+  <depend condition="$ROS_VERSION == 2">rclcpp_components</depend>
+
+  <build_depend>nlohmann_json</build_depend>
+
+  <exec_depend>nlohmann_json</exec_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type condition="$ROS_VERSION == 1">catkin</build_type>
+    <build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>
   </export>
 </package>
