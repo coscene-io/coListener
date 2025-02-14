@@ -63,10 +63,31 @@ struct MessageField {
 };
 
 struct MessageCache {
+    int64_t id; 
     std::string topic;
-    nlohmann::json msg;
+    std::string msg;
     std::string msgType;
     double ts;
+
+    MessageCache(const int64_t id, const std::string& topic, const std::string& msg, const std::string& msgType, const double& ts) {
+        this->id = id;
+        this->topic = topic;
+        this->msg = msg;
+        this->msgType = msgType;
+        this->ts = ts;
+    };
+
+    MessageCache(const std::string& topic, const std::string& msg, const std::string& msgType, const double& ts) {
+        this->id = 0;
+        this->topic = topic;
+        this->msg = msg;
+        this->msgType = msgType;
+        this->ts = ts;
+    };
+
+    size_t get_size() const {
+        return 16 + topic.size() + msg.size() + msgType.size();
+    }
 };
 
 template <typename T>

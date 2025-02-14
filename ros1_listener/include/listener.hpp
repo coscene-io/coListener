@@ -22,11 +22,15 @@
 #include <mutex>
 #include <thread>
 
+#include <curl/curl.h>
+#include <nlohmann/json.hpp>
 #include <ros/ros.h>
 #include <topic_tools/shape_shifter.h>
-#include <curl/curl.h>
 
 #include "colistener.hpp"
+#include "actions/action.hpp"
+#include "persistence/database_manager.hpp"
+#include "utils/logger.hpp"
 
 namespace ros1_listener {
 
@@ -40,12 +44,13 @@ public:
 private:
     ros::NodeHandle nh_;
 
+    std::shared_ptr<colistener::Action> action_;
     std::vector<ros::Subscriber> subscribers_;
     std::map<std::string, std::vector<colistener::MessageField>> message_definitions_;
     static const std::set<std::string> builtin_types_;
+    colistener::DatabaseManager database_manager_;
 
     std::mutex cache_mutex_;
-    std::vector<colistener::MessageCache> message_cache_;
     std::thread timer_thread_;
     bool running_ = true;
 
@@ -88,3 +93,4 @@ private:
 } // namespace ros1_listener
 
 #endif // ROS1_LISTENER_LISTENER_H
+

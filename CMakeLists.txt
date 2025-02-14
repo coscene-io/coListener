@@ -43,18 +43,32 @@ if(GIT_SCM)
     )
 endif()
 set(COLISTENER_VERSION "${CMAKE_PROJECT_VERSION}")
-configure_file(version.cpp.in
-        version.cpp @ONLY)
+configure_file(listener_base/src/version.cpp.in
+        colistener_base/src/version.cpp @ONLY)
+
+
+find_package(CURL REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 add_library(colistener_base SHARED
-        ${CMAKE_CURRENT_BINARY_DIR}/version.cpp
+        listener_base/src/actions/action.cpp
+        listener_base/src/actions/common_action.cpp
+        listener_base/src/actions/example_action.cpp
+        listener_base/src/persistence/database_manager.cpp
+        listener_base/src/utils/logger.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/colistener_base/src/version.cpp
 )
 
 target_include_directories(colistener_base
         PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/listener_base/include>
         $<INSTALL_INTERFACE:include>
 )
+
+target_link_libraries(colistener_base
+        ${CURL_LIBRARIES}
+        ${SQLite3_LIBRARIES})
 
 find_package(nlohmann_json QUIET)
 if(nlohmann_json_FOUND)
@@ -64,12 +78,13 @@ else()
     message(STATUS "nlohmann_json not found, will search at compile time")
 endif()
 
-find_package(CURL REQUIRED)
 
 if("$ENV{ROS_VERSION}" STREQUAL "1")
     if(catkin_FOUND)
         message(STATUS "Building with catkin")
         set(ROS_BUILD_TYPE "catkin")
+
+        add_compile_definitions(ROS1)
 
         find_package(catkin REQUIRED COMPONENTS
             roslib roscpp topic_tools)
@@ -86,7 +101,6 @@ if("$ENV{ROS_VERSION}" STREQUAL "1")
             ros1_listener/src/listener.cpp
         )
 
-        message(STATUS "CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR})
         target_include_directories(ros1_listener
                 SYSTEM PRIVATE
                 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ros1_listener/include>
@@ -94,7 +108,7 @@ if("$ENV{ROS_VERSION}" STREQUAL "1")
                 ${catkin_INCLUDE_DIRS}
         )
 
-        target_link_libraries(ros1_listener colistener_base ${CURL_LIBRARIES} ${catkin_LIBRARIES})
+        target_link_libraries(ros1_listener colistener_base ${catkin_LIBRARIES})
         enable_strict_compiler_warnings(ros1_listener)
 
         add_executable(colistener ros1_listener/src/main.cpp)
@@ -148,6 +162,8 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
         enable_strict_compiler_warnings(ros2_listener)
         add_executable(colistener
                 ros2_listener/src/main.cpp
+                listener_base/src/actions/example_action.cpp
+                listener_base/include/actions/example_action.hpp
         )
         target_include_directories(colistener
                 SYSTEM PRIVATE

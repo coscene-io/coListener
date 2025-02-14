@@ -2,27 +2,29 @@
 #include <cstring>
 #include <stdexcept>
 #include <fstream>
-#include <stack>
 #include <utility>
 
 #include "listener.hpp"
 
 namespace ros1_listener {
-
-
 const std::set<std::string> Listener::builtin_types_ = {
     "bool", "int8", "uint8", "int16", "uint16", "int32", "uint32",
     "int64", "uint64", "float32", "float64", "string", "time", "duration"
 };
 
-Listener::Listener() : curl_(nullptr), headers_(nullptr)  {
+Listener::Listener() {
     ros::NodeHandle private_nh("~");
 
-    curl_ = curl_easy_init();
-    if (!curl_) {
-        throw std::runtime_error("Failed to initialize CURL");
-    }
-    headers_ = curl_slist_append(nullptr, "Content-Type: application/json");
+    std::string action_type;
+    private_nh.param<std::string>("action_type", action_type, "example");
+    action_ = colistener::Action::create(action_type);
+
+    std::string db_path;
+    private_nh.param<std::string>("persistence_file_path", db_path, "/tmp/colistener_persistence.db");
+    database_manager_.init(db_path);
+
+    int persistence_expire_interval_secs;
+    private_nh.param<int>("persistence_expire_secs", persistence_expire_interval_secs, 3600);
 
     std::vector<std::string> topics;
     if (!private_nh.getParam("subscribe_topics", topics)) {
@@ -48,12 +50,6 @@ Listener::~Listener() {
     if (timer_thread_.joinable()) {
         timer_thread_.join();
     }
-    if (headers_) {
-        curl_slist_free_all(headers_);
-    }
-    if (curl_) {
-        curl_easy_cleanup(curl_);
-    }
 }
 
 void Listener::callback(const boost::shared_ptr<topic_tools::ShapeShifter const>& msg,
@@ -74,18 +70,13 @@ void Listener::callback(const boost::shared_ptr<topic_tools::ShapeShifter const>
 
     size_t offset = 0;
     deserialize_to_json(buffer.data(), offset, message_definitions_[datatype], json_msg);
-    ROS_INFO("Received message: %s", json_msg.dump().c_str());
-
-    {
-        colistener::MessageCache cache_item{
-            topic,
-            json_msg,
-            datatype,
-            ros::Time::now().toSec()
-        };
-        std::lock_guard<std::mutex> lock(cache_mutex_);
-        message_cache_.push_back(std::move(cache_item));
-    }
+    const auto msg_json_str = json_msg.dump();
+    database_manager_.insert_message(colistener::MessageCache{
+        topic,
+        msg_json_str,
+        datatype,
+        ros::Time::now().toSec()
+    });
 }
 
 void Listener::timer_callback() {
@@ -96,62 +87,10 @@ void Listener::timer_callback() {
 }
 
 void Listener::send_cached_messages() {
-    std::vector<colistener::MessageCache> messages_to_send;
-    {
-        std::lock_guard<std::mutex> lock(cache_mutex_);
-        if (message_cache_.empty()) {
-            return;
-        }
-        messages_to_send.swap(message_cache_);
-    }
-
-    ROS_INFO("Preparing to send %zu cached messages", messages_to_send.size());
-
-    nlohmann::json json_array = nlohmann::json::array();
-    for (const auto& cache_item : messages_to_send) {
-        nlohmann::json item;
-        item["topic"] = cache_item.topic;
-        item["msg"] = cache_item.msg;
-        item["msgType"] = cache_item.msgType;
-        item["ts"] = cache_item.ts;
-        json_array.push_back(item);
-    }
-
-    try {
-        if (!curl_) {
-            ROS_WARN("CURL not initialized, cached messages will be dropped");
-            return;
-        }
-
-        const std::string json_str = json_array.dump();
-        ROS_DEBUG("Sending JSON payload (size: %zu bytes)", json_str.length());
-        
-        const std::string url = std::string(colistener::DEFAULT_URL) + 
-                               std::string(":") + 
-                               std::string(colistener::DEFAULT_PORT) + 
-                               std::string(colistener::DEFAULT_ROUTE);
-        
-        curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers_);
-        curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, json_str.c_str());
-        curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, json_str.length());
-        
-        const CURLcode res = curl_easy_perform(curl_);
-        if (res != CURLE_OK) {
-            ROS_ERROR("Failed to send messages: %s", curl_easy_strerror(res));
-        } else {
-            long http_code = 0;
-            curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &http_code);
-            
-            if (http_code >= 200 && http_code < 300) {
-                ROS_INFO("Successfully sent %zu messages, HTTP status: %ld", 
-                        messages_to_send.size(), http_code);
-            } else {
-                ROS_WARN("Server returned unexpected status code: %ld", http_code);
-            }
-        }
-    } catch (const std::exception& e) {
-        ROS_ERROR("Exception while sending messages: %s", e.what());
+    const auto msgs = database_manager_.get_all_messages();
+    ROS_INFO("Preparing to send %zu cached messages", msgs.size());
+    if (action_->execute(msgs)) {
+        database_manager_.remove_messages(msgs);
     }
 }
 
@@ -432,7 +371,7 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
             offset += sizeof(uint32_t);
             std::memcpy(&nsecs, buffer + offset, sizeof(uint32_t));
             offset += sizeof(uint32_t);
-            
+
             nlohmann::json time_obj;
             time_obj["secs"] = secs;
             time_obj["nsecs"] = nsecs;

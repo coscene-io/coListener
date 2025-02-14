@@ -1,4 +1,8 @@
 <launch>
     <param name="~subscribe_topics"  type="yaml" value="['/error_code', '/error_event']"/>
+    <param name="~max_persistence_size" value=10485760/>
+    <param name="~persistence_expire_secs" value=3600/>
+    <param name="~persistence_file_path" value="/tmp/colistener_persistence.db"/>
+    <param name="~action_type" value="common"/>
     <node pkg="colistener" type="colistener" name="colistener" output="screen"/>
 </launch>
