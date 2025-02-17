@@ -3,7 +3,6 @@
 #include "actions/example_action.hpp"
 
 namespace colistener {
-
 std::shared_ptr<Action> Action::create(const std::string& type) {
     if (type == "common" || type.empty()) {
         return std::make_shared<CommonAction>();
@@ -14,5 +13,4 @@ std::shared_ptr<Action> Action::create(const std::string& type) {
 
     throw std::runtime_error("Unknown action type: " + type);
 }
-
-} // namespace colistener 
+} // namespace colistener

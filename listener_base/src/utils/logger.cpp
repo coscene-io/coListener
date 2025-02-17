@@ -1,4 +1,6 @@
 #include "utils/logger.hpp"
+
+#include <colistener.hpp>
 #include <iomanip>
 #include <sstream>
 #include <ctime>
@@ -8,7 +10,7 @@
 
 namespace colistener {
 Logger::Logger() : log_dir_("/tmp/colistener/logs/") {
-    mkdir(log_dir_.c_str(), 0755);
+    createDirectory(log_dir_);
 }
 
 Logger::~Logger() {
@@ -23,7 +25,7 @@ void Logger::set_log_dir(const std::string& dir) {
     if (log_dir_.back() != '/') {
         log_dir_ += '/';
     }
-    mkdir(log_dir_.c_str(), 0755);
+    createDirectory(log_dir_);
 }
 
 void Logger::log(const LogLevel level, const std::string& message) {

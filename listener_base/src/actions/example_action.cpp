@@ -1,5 +1,6 @@
 #include <iostream>
 #include "actions/example_action.hpp"
+#include "utils/logger.hpp"
 
 namespace colistener {
 
@@ -30,8 +31,7 @@ bool ExampleAction::execute(const std::vector<MessageCache>& messages) {
         item["ts"] = cache_item.ts;
         json_array.push_back(item);
     }
-
-    std::cout << json_array.dump() << std::endl;
+    COLOG_INFO("batch send messages: %s", json_array.dump().c_str());
     return true;
 }
 }

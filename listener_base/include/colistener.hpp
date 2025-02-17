@@ -18,6 +18,7 @@
 #include <vector>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <sys/stat.h>
 
 namespace colistener {
 extern const char VERSION[];
@@ -89,6 +90,24 @@ struct MessageCache {
         return 16 + topic.size() + msg.size() + msgType.size();
     }
 };
+
+
+inline void createDirectory(const std::string& path) {
+    size_t pos = 0;
+    while ((pos = path.find('/', pos + 1)) != std::string::npos) {
+        std::string sub_dir = path.substr(0, pos);
+        if (!sub_dir.empty()) {
+            const int ret = mkdir(sub_dir.c_str(), 0755);
+            if (ret == -1 && errno != EEXIST) {
+                std::string error_msg = "Failed to create log directory: " + path +
+                                       " (errno: " + std::to_string(errno) +
+                                       ", " + std::strerror(errno) + ")";
+                throw std::runtime_error(error_msg);
+            }
+        }
+    }
+}
+
 
 template <typename T>
 static std::string vector_to_string(const std::vector<T>& vec) {

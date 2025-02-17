@@ -15,23 +15,29 @@ const std::set<std::string> Listener::builtin_types_ = {
 Listener::Listener() {
     ros::NodeHandle private_nh("~");
 
+    std::string log_dir;
+    private_nh.param<std::string>("log_directory", log_dir, "/tmp/colistener/log/");
+    colistener::Logger::getInstance().set_log_dir(log_dir);
+    COLOG_INFO("log directory: %s", log_dir.c_str());
+
     std::string action_type;
     private_nh.param<std::string>("action_type", action_type, "example");
     action_ = colistener::Action::create(action_type);
+    COLOG_INFO("action type: %s", action_type.c_str());
 
     std::string db_path;
-    private_nh.param<std::string>("persistence_file_path", db_path, "/tmp/colistener_persistence.db");
-    database_manager_.init(db_path);
-
     int persistence_expire_interval_secs;
+    private_nh.param<std::string>("persistence_file_path", db_path, "/tmp/colistener/persistence/ros2.db");
     private_nh.param<int>("persistence_expire_secs", persistence_expire_interval_secs, 3600);
+    database_manager_.init(db_path, persistence_expire_interval_secs);
+    COLOG_INFO("persistence_file: %s, expire_secs: %d", db_path.c_str(), persistence_expire_interval_secs);
 
     std::vector<std::string> topics;
     if (!private_nh.getParam("subscribe_topics", topics)) {
         topics = {"/error_code", "/error_event"};
-        ROS_WARN("No topics specified, using default topic: %s", vector_to_string<std::string>(topics).c_str());
+        COLOG_WARN("No topics specified, using default topic: %s", vector_to_string<std::string>(topics).c_str());
     }
-    ROS_INFO("Subscribing to topics: %s", vector_to_string<std::string>(topics).c_str());
+    COLOG_INFO("Subscribing to topics: %s", vector_to_string<std::string>(topics).c_str());
 
     for (const auto& topic : topics) {
         ros::Subscriber sub = private_nh.subscribe<topic_tools::ShapeShifter>(
@@ -88,7 +94,6 @@ void Listener::timer_callback() {
 
 void Listener::send_cached_messages() {
     const auto msgs = database_manager_.get_all_messages();
-    ROS_INFO("Preparing to send %zu cached messages", msgs.size());
     if (action_->execute(msgs)) {
         database_manager_.remove_messages(msgs);
     }

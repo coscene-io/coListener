@@ -44,18 +44,15 @@ public:
 private:
     ros::NodeHandle nh_;
 
-    std::shared_ptr<colistener::Action> action_;
     std::vector<ros::Subscriber> subscribers_;
     std::map<std::string, std::vector<colistener::MessageField>> message_definitions_;
     static const std::set<std::string> builtin_types_;
+    std::shared_ptr<colistener::Action> action_;
     colistener::DatabaseManager database_manager_;
 
     std::mutex cache_mutex_;
     std::thread timer_thread_;
     bool running_ = true;
-
-    CURL* curl_;
-    struct curl_slist* headers_;
 
     void timer_callback();
     void send_cached_messages();
@@ -93,4 +90,3 @@ private:
 } // namespace ros1_listener
 
 #endif // ROS1_LISTENER_LISTENER_H
-

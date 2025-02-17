@@ -15,14 +15,10 @@
 #include <rclcpp/rclcpp.hpp>
 #include "listener.hpp"
 #include "colistener.hpp"
+#include "utils/logger.hpp"
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-
-    RCLCPP_INFO(rclcpp::get_logger("colistener"),
-                "coListener - ROS2, version: %s, git hash: %s",
-                colistener::VERSION, colistener::GIT_HASH);
-
     const auto node = std::make_shared<ros2_listener::Listener>();
     rclcpp::spin(node);
     rclcpp::shutdown();

@@ -21,6 +21,9 @@
 #include <nlohmann/json.hpp>
 #include <rosidl_typesupport_introspection_cpp/message_introspection.hpp>
 
+#include "actions/action.hpp"
+#include "persistence/database_manager.hpp"
+#include "utils/logger.hpp"
 #include "colistener.hpp"
 #include "generic_subscription.hpp"
 #include <mutex>
@@ -42,7 +45,13 @@ private:
     std::vector<std::string> pending_topics_;
     rclcpp::TimerBase::SharedPtr retry_timer_;
 
+    rclcpp::TimerBase::SharedPtr send_timer_;
+    std::shared_ptr<colistener::Action> action_;
+    colistener::DatabaseManager database_manager_;
+
     void check_and_subscribe_topics();
+
+    void batch_send_msgs_callback();
 
     void callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
                   const std::string& topic,

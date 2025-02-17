@@ -19,6 +19,7 @@
 
 namespace colistener {
 bool DatabaseManager::init(const std::string& db_path, int64_t expire_secs) {
+    createDirectory(db_path);
     expire_time_ = expire_secs;
     const int config_rc = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
     if (config_rc != SQLITE_OK) {

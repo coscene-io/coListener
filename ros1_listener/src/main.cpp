@@ -17,11 +17,12 @@
 #include <topic_tools/shape_shifter.h>
 #include "listener.hpp"
 #include "colistener.hpp"
+#include "utils/logger.hpp"
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "colistener");
 
-    ROS_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
+    COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
     ros1_listener::Listener node;
     ros::spin();
     return 0;

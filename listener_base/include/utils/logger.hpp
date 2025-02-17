@@ -4,6 +4,9 @@
 #include <string>
 #include <fstream>
 #include <mutex>
+#include <sstream>
+#include <cstdio>
+#include <vector>
 
 namespace colistener {
 
@@ -43,10 +46,33 @@ private:
     std::string get_log_file_name(const std::string& date) const;
 };
 
-#define COLOG_INFO(msg)  colistener::Logger::getInstance().log(colistener::LogLevel::INFO, msg)
-#define COLOG_WARN(msg)  colistener::Logger::getInstance().log(colistener::LogLevel::WARN, msg)
-#define COLOG_ERROR(msg) colistener::Logger::getInstance().log(colistener::LogLevel::ERROR, msg)
+namespace detail {
+    inline std::string format_string(const char* msg) {
+        return std::string(msg);
+    }
+
+    template<typename... Args>
+    std::string format_string(const char* format, Args... args) {
+        int size = snprintf(nullptr, 0, format, args...) + 1;
+        if (size <= 0) { return "Format Error"; }
+        std::vector<char> buf(size);
+        snprintf(buf.data(), size, format, args...);
+        return std::string(buf.data(), buf.data() + size - 1);
+    }
+}
+
+#define COLOG_INFO(...) \
+    colistener::Logger::getInstance().log(colistener::LogLevel::INFO, \
+        colistener::detail::format_string(__VA_ARGS__))
+
+#define COLOG_WARN(...) \
+    colistener::Logger::getInstance().log(colistener::LogLevel::WARN, \
+        colistener::detail::format_string(__VA_ARGS__))
+
+#define COLOG_ERROR(...) \
+    colistener::Logger::getInstance().log(colistener::LogLevel::ERROR, \
+        colistener::detail::format_string(__VA_ARGS__))
 
 } // namespace colistener
 
-#endif // COLISTENER_UTILS_LOGGER_H 
+#endif // COLISTENER_UTILS_LOGGER_H
