@@ -18,6 +18,8 @@ Listener::Listener() {
     std::string log_dir;
     private_nh.param<std::string>("log_directory", log_dir, "/tmp/colistener/log/");
     colistener::Logger::getInstance().set_log_dir(log_dir);
+
+    COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_dir.c_str());
 
     std::string action_type;
