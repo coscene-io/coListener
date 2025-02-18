@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import os
+import logging.handlers
 
 LOGGING_FORMAT = "[%(levelname)s] %(asctime)s [%(filename)s, line: %(lineno)04d]: %(message)s"
 fixed_length = 16
@@ -11,13 +12,16 @@ logger.setLevel(logging.INFO)
 log_dir = os.path.join(os.getenv('HOME'), '.cache', 'coListener', 'log')
 log_file = os.path.join(log_dir, 'coListener.log')
 
-if os.path.exists(log_file):
-    os.remove(log_file)
-
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
-file_handler = logging.FileHandler(log_file)
+file_handler = logging.handlers.TimedRotatingFileHandler(
+    log_file,
+    when='midnight',
+    interval=1,
+    backupCount=3,
+    encoding='utf-8'
+)
 
 class FixedLengthFileNameFormatter(logging.Formatter):
     def __init__(self, fmt=None, datefmt=None):
