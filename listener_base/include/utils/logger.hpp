@@ -11,9 +11,10 @@
 namespace colistener {
 
 enum class LogLevel {
-    INFO,
-    WARN,
-    ERROR
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 4,
+    ERROR = 8
 };
 
 class Logger {

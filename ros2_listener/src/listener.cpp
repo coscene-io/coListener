@@ -34,13 +34,13 @@ Listener::Listener() : Node("colistener") {
     database_manager_.init(persistence_file, persistence_secs);
     COLOG_INFO("persistence_file: %s, expire_secs: %d", persistence_file.c_str(), persistence_secs);
 
-    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/error_code", "/error_event"});
+    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/yolo/detections", "/error_event"});
     const std::vector<std::string> topics = this->get_parameter("subscribe_topics").as_string_array();
     pending_topics_ = topics;
     COLOG_INFO("Subscribing to topics: %s", colistener::vector_to_string<std::string>(topics).c_str());
 
     check_and_subscribe_topics();
-    retry_timer_ = this->create_wall_timer(std::chrono::seconds(3),
+    retry_timer_ = this->create_wall_timer(std::chrono::seconds(1),
                                            [this] {
                                                check_and_subscribe_topics();
                                            });
@@ -58,6 +58,7 @@ void Listener::check_and_subscribe_topics() {
     }
 
     auto topic_names_and_types = this->get_topic_names_and_types();
+    RCLCPP_INFO(this->get_logger(), "current topic count: %d", topic_names_and_types.size());
 
     for (auto it = pending_topics_.begin(); it != pending_topics_.end();) {
         const auto& topic = *it;
@@ -134,10 +135,19 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
         const auto fields = build_message_fields(members);
         nlohmann::json json_msg;
         size_t offset = 0;
+        size_t align_pos = 0;
         const auto msg_struct = msg->get_rcl_serialized_message();
 
+        std::vector<uint8_t> src_msg;
+        src_msg.resize(msg_struct.buffer_length);
+        for (size_t i = 0; i < msg_struct.buffer_length; ++i) {
+            src_msg[i] = msg_struct.buffer[i];
+        }
+        const auto debug_str = colistener::uint8_vector_to_string(src_msg);
+        RCLCPP_INFO(this->get_logger(), "message data: %s", debug_str.c_str());
+
         // skip fucking first 4 bytes, it's version? header? or something else?, who knows~!
-        deserialize_to_json(&msg_struct.buffer[4], offset, fields, json_msg);
+        deserialize_to_json(msg_struct.buffer, offset, align_pos, fields, json_msg);
 
         database_manager_.insert_message(colistener::MessageCache{
             topic,
@@ -152,7 +162,6 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
 }
 
 void Listener::batch_send_msgs_callback() {
-
     const auto msgs = database_manager_.get_all_messages();
     if (msgs.empty()) {
         return;
@@ -249,9 +258,17 @@ std::shared_ptr<GenericSubscription> Listener::create_generic_subscription(
     return subscription;
 }
 
-void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
+void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t& align_pos,
                                    const std::vector<colistener::MessageField>& fields,
                                    nlohmann::json& json_msg) {
+    // 检查大小端标记（第一个字节）
+    bool is_little_endian = (buffer[0] == 0x01);
+    COLOG_INFO("Message endianness: %s", is_little_endian ? "little-endian" : "big-endian");
+
+    // 跳过4字节头部
+    offset = 4;
+    align_pos = 4;
+
     struct StackItem {
         const uint8_t* buffer;
         const std::vector<colistener::MessageField>* fields;
@@ -278,9 +295,13 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
         if (field.is_array) {
             if (!current.is_array_processing) {
                 uint32_t array_size = 0;
+                RCLCPP_INFO(this->get_logger(), "array: read array length from offset: %u", offset);
+
+                offset = align_pos + ((offset - align_pos + 3) & ~3);
+                align_pos = offset;
+                RCLCPP_INFO(this->get_logger(), "array: read array length from offset: %u", offset);
                 std::memcpy(&array_size, buffer + offset, sizeof(uint32_t));
                 offset += sizeof(uint32_t);
-                offset = (offset + 3) & ~3;
 
                 (*current.json_msg)[field.name] = nlohmann::json::array();
                 current.array_size = array_size;
@@ -296,7 +317,7 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
 
             if (field.is_builtin) {
                 nlohmann::json element;
-                deserialize_builtin_type(buffer, offset, field.type, element);
+                deserialize_builtin_type(buffer, offset, align_pos, field.type, element, is_little_endian);
                 (*current.json_msg)[field.name].push_back(element);
             } else {
                 nlohmann::json sub_msg;
@@ -306,8 +327,9 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
             current.array_index++;
         } else {
             if (field.is_builtin) {
-                deserialize_builtin_type(buffer, offset, field.type,
-                                         (*current.json_msg)[field.name]);
+                deserialize_builtin_type(buffer, offset, align_pos, field.type,
+                                         (*current.json_msg)[field.name],
+                                         is_little_endian);
                 current.field_index++;
             } else {
                 nlohmann::json sub_msg;
@@ -322,111 +344,167 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
     }
 }
 
-void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
+void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, size_t& align_pos,
                                         colistener::RosDataType type,
-                                        nlohmann::json& value) {
+                                        nlohmann::json& value,
+                                        bool is_little_endian) {
     switch (type) {
         case colistener::RosDataType::RosDataTypeFloat: {
             float num_value;
+            RCLCPP_INFO(this->get_logger(), "float: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset = align_pos + ((offset - align_pos + 3) & ~3);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "float: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(float));
             offset += sizeof(float);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "float value: %lf", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeDouble: {
             double num_value;
+            RCLCPP_INFO(this->get_logger(), "double: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset = align_pos + ((offset - align_pos + 7) & ~7);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "double: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(double));
             offset += sizeof(double);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "double value: %lf", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeBool: {
             uint8_t bool_value;
             std::memcpy(&bool_value, buffer + offset, sizeof(uint8_t));
             offset += sizeof(uint8_t);
+            align_pos = offset;
             value = static_cast<bool>(bool_value);
+            RCLCPP_INFO(this->get_logger(), "bool value: %d", bool_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeOctet: {
             uint8_t num_value;
             std::memcpy(&num_value, buffer + offset, sizeof(uint8_t));
             offset += sizeof(uint8_t);
+            align_pos = offset;
             value = static_cast<unsigned int>(num_value);
+            RCLCPP_INFO(this->get_logger(), "octet value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeUint8: {
             uint8_t num_value;
             std::memcpy(&num_value, buffer + offset, sizeof(uint8_t));
             offset += sizeof(uint8_t);
+            align_pos = offset;
             value = static_cast<unsigned int>(num_value);
+            RCLCPP_INFO(this->get_logger(), "uint8 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeInt8: {
             int8_t num_value;
             std::memcpy(&num_value, buffer + offset, sizeof(int8_t));
             offset += sizeof(int8_t);
+            align_pos = offset;
             value = static_cast<int>(num_value);
+            RCLCPP_INFO(this->get_logger(), "int8 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeUint16: {
             uint16_t num_value;
+            RCLCPP_INFO(this->get_logger(), "uint16: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 1) & ~1);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "uint16: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(uint16_t));
             offset += sizeof(uint16_t);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "uint16 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeInt16: {
             int16_t num_value;
+            RCLCPP_INFO(this->get_logger(), "int16: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 1) & ~1);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "int16: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(int16_t));
             offset += sizeof(int16_t);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "int16 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeUint32: {
             uint32_t num_value;
+            RCLCPP_INFO(this->get_logger(), "uint32: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 3) & ~3);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "uint32: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(uint32_t));
             offset += sizeof(uint32_t);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "uint32 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeInt32: {
             int32_t num_value;
+            RCLCPP_INFO(this->get_logger(), "int32: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 3) & ~3);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "int32: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(int32_t));
             offset += sizeof(int32_t);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "int32 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeUint64: {
             uint64_t num_value;
+            RCLCPP_INFO(this->get_logger(), "uint64: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 7) & ~7);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "uint64: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(uint64_t));
             offset += sizeof(uint64_t);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "uint64 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeInt64: {
             int64_t num_value;
+            RCLCPP_INFO(this->get_logger(), "int64: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 7) & ~7);
+            align_pos = offset;
+            RCLCPP_INFO(this->get_logger(), "int64: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&num_value, buffer + offset, sizeof(int64_t));
             offset += sizeof(int64_t);
             value = num_value;
+            RCLCPP_INFO(this->get_logger(), "int64 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeString: {
             uint32_t str_len = 0;
+            RCLCPP_INFO(this->get_logger(), "string: read data from offset: %u, alignment pos: %u", offset, align_pos);
+            offset =  align_pos + ((offset - align_pos + 3) & ~3);
+            RCLCPP_INFO(this->get_logger(), "string: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
             std::memcpy(&str_len, buffer + offset, sizeof(uint32_t));
             offset += sizeof(uint32_t);
+            align_pos = offset;
 
             if (str_len > 0) {
                 std::string str(reinterpret_cast<const char*>(buffer + offset), str_len - 1); // remove null
                 offset += str_len;
-                offset = (offset + 3) & ~3;
                 value = str;
+                RCLCPP_INFO(this->get_logger(), "string value: \"%s\"", str.c_str());
             } else {
                 value = "";
+                RCLCPP_INFO(this->get_logger(), "string value: \"\"");
             }
             break;
         }
         default:
-            throw std::runtime_error("Unsupported builtin type.");
+            if (is_little_endian) {
+                throw std::runtime_error("Unsupported builtin type.");
+            }
     }
 }
 

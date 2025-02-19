@@ -57,7 +57,7 @@ private:
                   const std::string& topic,
                   const std::string& datatype);
 
-    static std::vector<colistener::MessageField> build_message_fields(
+    std::vector<colistener::MessageField> build_message_fields(
         const rosidl_typesupport_introspection_cpp::MessageMembers* members);
 
     static std::shared_ptr<GenericSubscription> create_generic_subscription(
@@ -67,15 +67,16 @@ private:
         const rclcpp::QoS& qos,
         const std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>& callback);
 
-    static void deserialize_to_json(const uint8_t* buffer, size_t& offset,
+    void deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t& align_pos,
                                     const std::vector<colistener::MessageField>& fields,
                                     nlohmann::json& json_msg);
 
-    static void deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
+    void deserialize_builtin_type(const uint8_t* buffer, size_t& offset, size_t& align_pos,
                                          colistener::RosDataType type,
-                                         nlohmann::json& value);
+                                         nlohmann::json& value,
+                                         bool is_little_endian);
 
-    static colistener::RosDataType convert_to_rostype(uint8_t ros_type);
+    colistener::RosDataType convert_to_rostype(uint8_t ros_type);
 
     rclcpp::QoS get_qos_from_topic(const std::string& topic) const;
 };

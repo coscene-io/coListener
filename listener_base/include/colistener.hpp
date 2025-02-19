@@ -108,7 +108,6 @@ inline void createDirectory(const std::string& path) {
     }
 }
 
-
 template <typename T>
 static std::string vector_to_string(const std::vector<T>& vec) {
     std::ostringstream oss;
@@ -123,6 +122,18 @@ static std::string vector_to_string(const std::vector<T>& vec) {
     return oss.str();
 }
 
+[[maybe_unused]] static std::string uint8_vector_to_string(const std::vector<uint8_t>& vec) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        oss << static_cast<int>(vec[i]);
+        if (i != vec.size() - 1) {
+            oss << ", ";
+        }
+    }
+    oss << "]";
+    return oss.str();
+}
 
 }
 
