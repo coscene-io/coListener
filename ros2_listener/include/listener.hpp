@@ -67,14 +67,15 @@ private:
         const rclcpp::QoS& qos,
         const std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>& callback);
 
-    void deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t& align_pos,
+    void deserialize_to_json(const uint8_t* buffer, size_t& offset,
                                     const std::vector<colistener::MessageField>& fields,
                                     nlohmann::json& json_msg);
 
-    void deserialize_builtin_type(const uint8_t* buffer, size_t& offset, size_t& align_pos,
+    void deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
                                          colistener::RosDataType type,
-                                         nlohmann::json& value,
-                                         bool is_little_endian);
+                                         nlohmann::json& value);
+
+    size_t alignmentData(size_t offset, int length);
 
     colistener::RosDataType convert_to_rostype(uint8_t ros_type);
 

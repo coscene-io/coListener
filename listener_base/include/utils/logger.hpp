@@ -74,6 +74,10 @@ namespace detail {
     colistener::Logger::getInstance().log(colistener::LogLevel::ERROR, \
         colistener::detail::format_string(__VA_ARGS__))
 
+#define COLOG_DEBUG(...) \
+    colistener::Logger::getInstance().log(colistener::LogLevel::INFO, \
+        colistener::detail::format_string(__VA_ARGS__))
+
 } // namespace colistener
 
 #endif // COLISTENER_UTILS_LOGGER_H

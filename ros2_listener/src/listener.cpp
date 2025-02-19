@@ -135,7 +135,6 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
         const auto fields = build_message_fields(members);
         nlohmann::json json_msg;
         size_t offset = 0;
-        size_t align_pos = 0;
         const auto msg_struct = msg->get_rcl_serialized_message();
 
         std::vector<uint8_t> src_msg;
@@ -147,7 +146,7 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
         RCLCPP_INFO(this->get_logger(), "message data: %s", debug_str.c_str());
 
         // skip fucking first 4 bytes, it's version? header? or something else?, who knows~!
-        deserialize_to_json(msg_struct.buffer, offset, align_pos, fields, json_msg);
+        deserialize_to_json(msg_struct.buffer, offset, fields, json_msg);
 
         database_manager_.insert_message(colistener::MessageCache{
             topic,
@@ -258,16 +257,20 @@ std::shared_ptr<GenericSubscription> Listener::create_generic_subscription(
     return subscription;
 }
 
-void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t& align_pos,
+
+size_t Listener::alignmentData(size_t offset, int length) {
+    const auto alignment = (offset - 4) % length;
+    if (alignment > 0) {
+        return offset + length - alignment;
+    }
+    return offset;
+}
+
+void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
                                    const std::vector<colistener::MessageField>& fields,
                                    nlohmann::json& json_msg) {
-    // 检查大小端标记（第一个字节）
-    bool is_little_endian = (buffer[0] == 0x01);
-    COLOG_INFO("Message endianness: %s", is_little_endian ? "little-endian" : "big-endian");
-
     // 跳过4字节头部
     offset = 4;
-    align_pos = 4;
 
     struct StackItem {
         const uint8_t* buffer;
@@ -295,13 +298,9 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t
         if (field.is_array) {
             if (!current.is_array_processing) {
                 uint32_t array_size = 0;
-                RCLCPP_INFO(this->get_logger(), "array: read array length from offset: %u", offset);
-
-                offset = align_pos + ((offset - align_pos + 3) & ~3);
-                align_pos = offset;
-                RCLCPP_INFO(this->get_logger(), "array: read array length from offset: %u", offset);
                 std::memcpy(&array_size, buffer + offset, sizeof(uint32_t));
                 offset += sizeof(uint32_t);
+                offset = (offset + 3) & ~3;
 
                 (*current.json_msg)[field.name] = nlohmann::json::array();
                 current.array_size = array_size;
@@ -317,7 +316,7 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t
 
             if (field.is_builtin) {
                 nlohmann::json element;
-                deserialize_builtin_type(buffer, offset, align_pos, field.type, element, is_little_endian);
+                deserialize_builtin_type(buffer, offset, field.type, element);
                 (*current.json_msg)[field.name].push_back(element);
             } else {
                 nlohmann::json sub_msg;
@@ -327,9 +326,9 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t
             current.array_index++;
         } else {
             if (field.is_builtin) {
-                deserialize_builtin_type(buffer, offset, align_pos, field.type,
-                                         (*current.json_msg)[field.name],
-                                         is_little_endian);
+                deserialize_builtin_type(buffer, offset, field.type,
+                                         (*current.json_msg)[field.name]
+                                         );
                 current.field_index++;
             } else {
                 nlohmann::json sub_msg;
@@ -344,17 +343,16 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset, size_t
     }
 }
 
-void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, size_t& align_pos,
+void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
                                         colistener::RosDataType type,
-                                        nlohmann::json& value,
-                                        bool is_little_endian) {
+                                        nlohmann::json& value) {
+    RCLCPP_INFO(this->get_logger(), "rosdatatype: %u", type);
     switch (type) {
         case colistener::RosDataType::RosDataTypeFloat: {
             float num_value;
-            RCLCPP_INFO(this->get_logger(), "float: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset = align_pos + ((offset - align_pos + 3) & ~3);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "float: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "float: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 4);
+            RCLCPP_INFO(this->get_logger(), "float: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(float));
             offset += sizeof(float);
             value = num_value;
@@ -363,10 +361,9 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeDouble: {
             double num_value;
-            RCLCPP_INFO(this->get_logger(), "double: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset = align_pos + ((offset - align_pos + 7) & ~7);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "double: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "double: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 8);
+            RCLCPP_INFO(this->get_logger(), "double: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(double));
             offset += sizeof(double);
             value = num_value;
@@ -377,7 +374,6 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
             uint8_t bool_value;
             std::memcpy(&bool_value, buffer + offset, sizeof(uint8_t));
             offset += sizeof(uint8_t);
-            align_pos = offset;
             value = static_cast<bool>(bool_value);
             RCLCPP_INFO(this->get_logger(), "bool value: %d", bool_value);
             break;
@@ -386,7 +382,6 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
             uint8_t num_value;
             std::memcpy(&num_value, buffer + offset, sizeof(uint8_t));
             offset += sizeof(uint8_t);
-            align_pos = offset;
             value = static_cast<unsigned int>(num_value);
             RCLCPP_INFO(this->get_logger(), "octet value: %d", num_value);
             break;
@@ -395,7 +390,6 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
             uint8_t num_value;
             std::memcpy(&num_value, buffer + offset, sizeof(uint8_t));
             offset += sizeof(uint8_t);
-            align_pos = offset;
             value = static_cast<unsigned int>(num_value);
             RCLCPP_INFO(this->get_logger(), "uint8 value: %d", num_value);
             break;
@@ -404,17 +398,15 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
             int8_t num_value;
             std::memcpy(&num_value, buffer + offset, sizeof(int8_t));
             offset += sizeof(int8_t);
-            align_pos = offset;
             value = static_cast<int>(num_value);
             RCLCPP_INFO(this->get_logger(), "int8 value: %d", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeUint16: {
             uint16_t num_value;
-            RCLCPP_INFO(this->get_logger(), "uint16: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 1) & ~1);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "uint16: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "uint16: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 2);
+            RCLCPP_INFO(this->get_logger(), "uint16: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(uint16_t));
             offset += sizeof(uint16_t);
             value = num_value;
@@ -423,10 +415,9 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeInt16: {
             int16_t num_value;
-            RCLCPP_INFO(this->get_logger(), "int16: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 1) & ~1);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "int16: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "int16: offset before alignment: %u,", offset);
+            offset = alignmentData(offset, 2);
+            RCLCPP_INFO(this->get_logger(), "int16: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(int16_t));
             offset += sizeof(int16_t);
             value = num_value;
@@ -435,10 +426,9 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeUint32: {
             uint32_t num_value;
-            RCLCPP_INFO(this->get_logger(), "uint32: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 3) & ~3);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "uint32: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "uint32: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 4);
+            RCLCPP_INFO(this->get_logger(), "uint32: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(uint32_t));
             offset += sizeof(uint32_t);
             value = num_value;
@@ -447,10 +437,9 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeInt32: {
             int32_t num_value;
-            RCLCPP_INFO(this->get_logger(), "int32: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 3) & ~3);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "int32: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "int32: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 4);
+            RCLCPP_INFO(this->get_logger(), "int32: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(int32_t));
             offset += sizeof(int32_t);
             value = num_value;
@@ -459,10 +448,9 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeUint64: {
             uint64_t num_value;
-            RCLCPP_INFO(this->get_logger(), "uint64: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 7) & ~7);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "uint64: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "uint64: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 8);
+            RCLCPP_INFO(this->get_logger(), "uint64: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(uint64_t));
             offset += sizeof(uint64_t);
             value = num_value;
@@ -471,10 +459,9 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeInt64: {
             int64_t num_value;
-            RCLCPP_INFO(this->get_logger(), "int64: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 7) & ~7);
-            align_pos = offset;
-            RCLCPP_INFO(this->get_logger(), "int64: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "int64: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 8);
+            RCLCPP_INFO(this->get_logger(), "int64: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(int64_t));
             offset += sizeof(int64_t);
             value = num_value;
@@ -483,12 +470,11 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
         }
         case colistener::RosDataType::RosDataTypeString: {
             uint32_t str_len = 0;
-            RCLCPP_INFO(this->get_logger(), "string: read data from offset: %u, alignment pos: %u", offset, align_pos);
-            offset =  align_pos + ((offset - align_pos + 3) & ~3);
-            RCLCPP_INFO(this->get_logger(), "string: read data after alignment offset: %u, alignment pos: %u", offset, align_pos);
+            RCLCPP_INFO(this->get_logger(), "string: offset before alignment: %u", offset);
+            offset = alignmentData(offset, 4);
+            RCLCPP_INFO(this->get_logger(), "string: read data after alignment: %u", offset);
             std::memcpy(&str_len, buffer + offset, sizeof(uint32_t));
             offset += sizeof(uint32_t);
-            align_pos = offset;
 
             if (str_len > 0) {
                 std::string str(reinterpret_cast<const char*>(buffer + offset), str_len - 1); // remove null
@@ -502,9 +488,7 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset, s
             break;
         }
         default:
-            if (is_little_endian) {
-                throw std::runtime_error("Unsupported builtin type.");
-            }
+            throw std::runtime_error("Unsupported builtin type.");
     }
 }
 
