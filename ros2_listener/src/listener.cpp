@@ -19,25 +19,25 @@ Listener::Listener() : Node("colistener") {
     const std::string log_directory = this->get_parameter("log_directory").as_string();
     colistener::Logger::getInstance().set_log_dir(log_directory);
 
-    COLOG_INFO("coListener - ROS2, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
-    COLOG_INFO("log directory: %s", log_directory.c_str());
+    RCLCPP_INFO(this->get_logger(), "coListener - ROS2, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
+    RCLCPP_INFO(this->get_logger(), "log directory: %s", log_directory.c_str());
 
     this->declare_parameter("action_type", "example");
     const std::string action_type = this->get_parameter("action_type").as_string();
     action_ = colistener::Action::create(action_type);
-    COLOG_INFO("action_type: %s", action_type.c_str());
+    RCLCPP_INFO(this->get_logger(), "action_type: %s", action_type.c_str());
 
     this->declare_parameter("persistence_file_path", "/tmp/colistener/persistence/ros2.db");
     const std::string persistence_file = this->get_parameter("persistence_file_path").as_string();
     this->declare_parameter("persistence_expire_secs", 3600);
     const int64_t persistence_secs = this->get_parameter("persistence_expire_secs").as_int();
     database_manager_.init(persistence_file, persistence_secs);
-    COLOG_INFO("persistence_file: %s, expire_secs: %d", persistence_file.c_str(), persistence_secs);
+    RCLCPP_INFO(this->get_logger(), "persistence_file: %s, expire_secs: %d", persistence_file.c_str(), persistence_secs);
 
-    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/yolo/detections", "/error_event"});
+    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/static_uint8_align", "/error_event"});
     const std::vector<std::string> topics = this->get_parameter("subscribe_topics").as_string_array();
     pending_topics_ = topics;
-    COLOG_INFO("Subscribing to topics: %s", colistener::vector_to_string<std::string>(topics).c_str());
+    RCLCPP_INFO(this->get_logger(), "Subscribing to topics: %s", colistener::vector_to_string<std::string>(topics).c_str());
 
     check_and_subscribe_topics();
     retry_timer_ = this->create_wall_timer(std::chrono::seconds(1),
@@ -58,7 +58,7 @@ void Listener::check_and_subscribe_topics() {
     }
 
     auto topic_names_and_types = this->get_topic_names_and_types();
-    RCLCPP_INFO(this->get_logger(), "current topic count: %d", topic_names_and_types.size());
+    // RCLCPP_INFO(this->get_logger(), "current topic count: %d", topic_names_and_types.size());
 
     for (auto it = pending_topics_.begin(); it != pending_topics_.end();) {
         const auto& topic = *it;
@@ -74,7 +74,7 @@ void Listener::check_and_subscribe_topics() {
                     rclcpp::SubscriptionEventCallbacks event_callbacks;
                     event_callbacks.incompatible_qos_callback =
                         [this, topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo &) {
-                            COLOG_ERROR("Incompatible subscriber QoS settings for topic \"%s\" (%s)",
+                            RCLCPP_INFO(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
                                 topic.c_str(), datatype.c_str());
                         };
 
@@ -104,11 +104,11 @@ void Listener::check_and_subscribe_topics() {
                 }
             }
             catch (const std::exception& e) {
-                COLOG_ERROR("Failed to subscribe to topic '%s': %s", topic.c_str(), e.what());
+                RCLCPP_INFO(this->get_logger(), "Failed to subscribe to topic '%s': %s", topic.c_str(), e.what());
             }
 
             if (subscription_success) {
-                COLOG_INFO("Successfully subscribed to topic: %s", topic.c_str());
+                RCLCPP_INFO(this->get_logger(), "Successfully subscribed to topic: %s", topic.c_str());
                 it = pending_topics_.erase(it);
                 continue;
             }
@@ -146,7 +146,7 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
         RCLCPP_INFO(this->get_logger(), "message data: %s", debug_str.c_str());
 
         // skip fucking first 4 bytes, it's version? header? or something else?, who knows~!
-        deserialize_to_json(msg_struct.buffer, offset, fields, json_msg);
+        deserialize_to_json(&msg_struct.buffer[4], offset, fields, json_msg);
 
         database_manager_.insert_message(colistener::MessageCache{
             topic,
@@ -156,7 +156,7 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
         });
     }
     catch (const std::exception& e) {
-        COLOG_ERROR("Error processing message on topic '%s': %s", topic.c_str(), e.what());
+        RCLCPP_INFO(this->get_logger(), "Error processing message on topic '%s': %s", topic.c_str(), e.what());
     }
 }
 
@@ -169,7 +169,7 @@ void Listener::batch_send_msgs_callback() {
     if (action_->execute(msgs)) {
         database_manager_.remove_messages(msgs);
     } else {
-        COLOG_ERROR("Failed to send messages");
+        RCLCPP_INFO(this->get_logger(), "Failed to send messages");
     }
 }
 
@@ -193,7 +193,7 @@ rclcpp::QoS Listener::get_qos_from_topic(const std::string& topic) const {
 
     depth = std::max(depth, static_cast<size_t>(DEFAULT_MIN_QOS_DEPTH));
     if (depth > DEFAULT_MAX_QOS_DEPTH) {
-        COLOG_WARN("Limiting history depth for topic '%s' to %zu (was %zu). You may want to increase "
+        RCLCPP_INFO(this->get_logger(), "Limiting history depth for topic '%s' to %zu (was %zu). You may want to increase "
                    "the max_qos_depth parameter value.",
                    topic.c_str(), DEFAULT_MAX_QOS_DEPTH, depth);
         depth = DEFAULT_MAX_QOS_DEPTH;
@@ -206,7 +206,7 @@ rclcpp::QoS Listener::get_qos_from_topic(const std::string& topic) const {
         qos.reliable();
     } else {
         if (reliability_reliable_endpoints_count > 0) {
-            COLOG_WARN("Some, but not all, publishers on topic '%s' are offering QoSReliabilityPolicy.RELIABLE. "
+            RCLCPP_INFO(this->get_logger(), "Some, but not all, publishers on topic '%s' are offering QoSReliabilityPolicy.RELIABLE. "
                        "Falling back to QoSReliabilityPolicy.BEST_EFFORT as it will connect to all publishers",
                        topic.c_str());
         }
@@ -218,7 +218,7 @@ rclcpp::QoS Listener::get_qos_from_topic(const std::string& topic) const {
         qos.transient_local();
     } else {
         if (durability_transient_local_endpoints_count > 0) {
-            COLOG_WARN("Some, but not all, publishers on topic '%s' are offering "
+            RCLCPP_INFO(this->get_logger(), "Some, but not all, publishers on topic '%s' are offering "
                        "QoSDurabilityPolicy.TRANSIENT_LOCAL. Falling back to "
                        "QoSDurabilityPolicy.VOLATILE as it will connect to all publishers",
                        topic.c_str());
@@ -259,7 +259,7 @@ std::shared_ptr<GenericSubscription> Listener::create_generic_subscription(
 
 
 size_t Listener::alignmentData(size_t offset, int length) {
-    const auto alignment = (offset - 4) % length;
+    const auto alignment = offset % length;
     if (alignment > 0) {
         return offset + length - alignment;
     }
@@ -269,75 +269,37 @@ size_t Listener::alignmentData(size_t offset, int length) {
 void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
                                    const std::vector<colistener::MessageField>& fields,
                                    nlohmann::json& json_msg) {
-    // 跳过4字节头部
-    offset = 4;
-
-    struct StackItem {
-        const uint8_t* buffer;
-        const std::vector<colistener::MessageField>* fields;
-        nlohmann::json* json_msg;
-        size_t field_index;
-        uint32_t array_index;
-        uint32_t array_size;
-        bool is_array_processing;
-    };
-
-    std::stack<StackItem> stack;
-    stack.push({buffer, &fields, &json_msg, 0, 0, 0, false});
-
-    while (!stack.empty()) {
-        auto& current = stack.top();
-
-        if (current.field_index >= current.fields->size()) {
-            stack.pop();
-            continue;
-        }
-
-        const auto& field = (*current.fields)[current.field_index];
-
+    for (const auto& field : fields) {
         if (field.is_array) {
-            if (!current.is_array_processing) {
-                uint32_t array_size = 0;
+            json_msg[field.name] = nlohmann::json::array();
+
+            uint32_t array_size;
+            if (field.array_size > 0) {
+                array_size = field.array_size;
+            } else {
+                offset = alignmentData(offset, 4);
                 std::memcpy(&array_size, buffer + offset, sizeof(uint32_t));
                 offset += sizeof(uint32_t);
-                offset = (offset + 3) & ~3;
-
-                (*current.json_msg)[field.name] = nlohmann::json::array();
-                current.array_size = array_size;
-                current.array_index = 0;
-                current.is_array_processing = true;
             }
 
-            if (current.array_index >= current.array_size) {
-                current.is_array_processing = false;
-                current.field_index++;
-                continue;
+            for (uint32_t i = 0; i < array_size; ++i) {
+                if (field.is_builtin) {
+                    nlohmann::json element;
+                    deserialize_builtin_type(buffer, offset, field.type, element);
+                    json_msg[field.name].push_back(element);
+                } else {
+                    nlohmann::json sub_msg;
+                    deserialize_to_json(buffer, offset, field.sub_fields, sub_msg);
+                    json_msg[field.name].push_back(sub_msg);
+                }
             }
-
-            if (field.is_builtin) {
-                nlohmann::json element;
-                deserialize_builtin_type(buffer, offset, field.type, element);
-                (*current.json_msg)[field.name].push_back(element);
-            } else {
-                nlohmann::json sub_msg;
-                stack.push({buffer, &field.sub_fields, &sub_msg, 0, 0, 0, false});
-                (*current.json_msg)[field.name].push_back(sub_msg);
-            }
-            current.array_index++;
         } else {
             if (field.is_builtin) {
-                deserialize_builtin_type(buffer, offset, field.type,
-                                         (*current.json_msg)[field.name]
-                                         );
-                current.field_index++;
+                deserialize_builtin_type(buffer, offset, field.type, json_msg[field.name]);
             } else {
                 nlohmann::json sub_msg;
-                (*current.json_msg)[field.name] = sub_msg;
-                stack.push({
-                    buffer, &field.sub_fields,
-                    &(*current.json_msg)[field.name], 0, 0, 0, false
-                });
-                current.field_index++;
+                deserialize_to_json(buffer, offset, field.sub_fields, sub_msg);
+                json_msg[field.name] = sub_msg;
             }
         }
     }
@@ -346,28 +308,28 @@ void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
 void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
                                         colistener::RosDataType type,
                                         nlohmann::json& value) {
-    RCLCPP_INFO(this->get_logger(), "rosdatatype: %u", type);
+    RCLCPP_DEBUG(this->get_logger(), "rosdatatype: %u", type);
     switch (type) {
         case colistener::RosDataType::RosDataTypeFloat: {
             float num_value;
-            RCLCPP_INFO(this->get_logger(), "float: offset before alignment: %u", offset);
+            RCLCPP_DEBUG(this->get_logger(), "float: offset before alignment: %u", offset);
             offset = alignmentData(offset, 4);
-            RCLCPP_INFO(this->get_logger(), "float: read data after alignment: %u", offset);
+            RCLCPP_DEBUG(this->get_logger(), "float: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(float));
             offset += sizeof(float);
             value = num_value;
-            RCLCPP_INFO(this->get_logger(), "float value: %lf", num_value);
+            RCLCPP_DEBUG(this->get_logger(), "float value: %lf", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeDouble: {
             double num_value;
-            RCLCPP_INFO(this->get_logger(), "double: offset before alignment: %u", offset);
+            RCLCPP_DEBUG(this->get_logger(), "double: offset before alignment: %u", offset);
             offset = alignmentData(offset, 8);
-            RCLCPP_INFO(this->get_logger(), "double: read data after alignment: %u", offset);
+            RCLCPP_DEBUG(this->get_logger(), "double: read data after alignment: %u", offset);
             std::memcpy(&num_value, buffer + offset, sizeof(double));
             offset += sizeof(double);
             value = num_value;
-            RCLCPP_INFO(this->get_logger(), "double value: %lf", num_value);
+            RCLCPP_DEBUG(this->get_logger(), "double value: %lf", num_value);
             break;
         }
         case colistener::RosDataType::RosDataTypeBool: {
@@ -542,34 +504,18 @@ colistener::RosDataType Listener::convert_to_rostype(const uint8_t ros_type) {
 
 std::vector<colistener::MessageField> Listener::build_message_fields(
     const rosidl_typesupport_introspection_cpp::MessageMembers* members) {
-    struct StackItem {
-        const rosidl_typesupport_introspection_cpp::MessageMembers* members;
-        std::vector<colistener::MessageField>* fields;
-        size_t field_index;
-    };
+    std::vector<colistener::MessageField> fields;
 
-    std::stack<StackItem> stack;
-    std::vector<colistener::MessageField> result;
-    stack.push({members, &result, 0});
-
-    while (!stack.empty()) {
-        auto& current = stack.top();
-
-        if (current.field_index >= current.members->member_count_) {
-            stack.pop();
-            continue;
-        }
-
-        const auto& member = current.members->members_[current.field_index];
+    for (size_t i = 0; i < members->member_count_; ++i) {
+        const auto& member = members->members_[i];
         colistener::MessageField field;
         field.name = member.name_;
         field.is_array = member.is_array_;
+        field.array_size = member.array_size_;
 
         if (member.type_id_ < rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE) {
             field.is_builtin = true;
             field.type = convert_to_rostype(member.type_id_);
-            current.fields->push_back(std::move(field));
-            current.field_index++;
         } else {
             field.is_builtin = false;
             if (!member.members_ || !member.members_->data) {
@@ -585,15 +531,11 @@ std::vector<colistener::MessageField> Listener::build_message_fields(
 
             field.package_name = sub_members->message_namespace_;
             field.type = colistener::RosDataType::RosDataTypeMessage;
-            field.sub_fields = std::vector<colistener::MessageField>();
-
-            current.fields->push_back(std::move(field));
-
-            stack.push({sub_members, &current.fields->back().sub_fields, 0});
-            current.field_index++;
+            field.sub_fields = build_message_fields(sub_members);
         }
+        fields.push_back(std::move(field));
     }
 
-    return result;
+    return fields;
 }
 } // namespace ros2_listener

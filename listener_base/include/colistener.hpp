@@ -58,6 +58,7 @@ struct MessageField {
     RosDataType type;
     std::string name;
     bool is_array;
+    size_t array_size;
     bool is_builtin;
     std::string package_name;
     std::vector<MessageField> sub_fields;
