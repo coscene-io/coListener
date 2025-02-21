@@ -34,12 +34,13 @@ namespace ros2_listener {
 constexpr int64_t DEFAULT_MIN_QOS_DEPTH = 1;
 constexpr int64_t DEFAULT_MAX_QOS_DEPTH = 25;
 
-class Listener : public rclcpp::Node {
+class Listener final : public rclcpp::Node {
 public:
     Listener();
     ~Listener() override = default;
 
 private:
+    const bool system_is_little_endian_;
     std::vector<rclcpp::SubscriptionBase::SharedPtr> subscribers_;
     std::map<std::string, std::vector<colistener::MessageField>> message_definitions_;
     std::vector<std::string> pending_topics_;
@@ -68,18 +69,39 @@ private:
         const std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>& callback);
 
     void deserialize_to_json(const uint8_t* buffer, size_t& offset,
-                                    const std::vector<colistener::MessageField>& fields,
-                                    nlohmann::json& json_msg);
+                            const std::vector<colistener::MessageField>& fields,
+                            nlohmann::json& json_msg,
+                            bool is_little_endian);
 
     void deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
-                                         colistener::RosDataType type,
-                                         nlohmann::json& value);
+                                 colistener::RosDataType type,
+                                 nlohmann::json& value,
+                                 bool is_little_endian);
 
-    size_t alignmentData(size_t offset, int length);
+    static bool check_system_little_endian() {
+        static const union { uint16_t u; uint8_t c[2]; } endian_test = {1};
+        return endian_test.c[0] == 1;
+    }
+
+    static void alignmentData(size_t& offset, int length);
 
     colistener::RosDataType convert_to_rostype(uint8_t ros_type);
 
     rclcpp::QoS get_qos_from_topic(const std::string& topic) const;
+
+    template<typename T>
+    static T swap_endian(T value) {
+        union {
+            T value;
+            uint8_t bytes[sizeof(T)];
+        } source, dest;
+
+        source.value = value;
+        for(size_t i = 0; i < sizeof(T); i++) {
+            dest.bytes[i] = source.bytes[sizeof(T) - 1 - i];
+        }
+        return dest.value;
+    }
 };
 } // namespace ros2_listener
 

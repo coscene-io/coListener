@@ -6,10 +6,9 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <cstring>
 
 namespace colistener {
-Logger::Logger() : log_dir_("/tmp/colistener/logs/") {
+Logger::Logger() : log_dir_("/tmp/colistener/logs/"), current_level_(LogLevel::INFO) {
     createDirectory(log_dir_);
 }
 
@@ -28,8 +27,22 @@ void Logger::set_log_dir(const std::string& dir) {
     createDirectory(log_dir_);
 }
 
+void Logger::set_log_level(LogLevel level) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    current_level_ = level;
+}
+
+bool Logger::should_log(LogLevel msg_level, LogLevel filter_level) {
+    return static_cast<int>(msg_level) >= static_cast<int>(filter_level);
+}
+
 void Logger::log(const LogLevel level, const std::string& message) {
     std::lock_guard<std::mutex> lock(mutex_);
+    
+    if (!should_log(level, current_level_)) {
+        return;
+    }
+
     check_and_rotate_log();
 
     if (current_file_.is_open()) {
@@ -82,8 +95,9 @@ void Logger::clean_old_logs() const {
 
 std::string Logger::get_level_string(const LogLevel level) {
     switch (level) {
-        case LogLevel::INFO: return "INFO";
-        case LogLevel::WARN: return "WARN";
+        case LogLevel::DEBUG: return "DEBUG";
+        case LogLevel::INFO: return " INFO";
+        case LogLevel::WARN: return " WARN";
         case LogLevel::ERROR: return "ERROR";
         default: return "UNKNOWN";
     }
