@@ -30,6 +30,7 @@ private:
     CURL* curl_;
     std::string endpoint_;
     struct curl_slist* headers_;
+    FILE* dev_null_;
 };
 
 } // namespace colistener

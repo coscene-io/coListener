@@ -2,16 +2,25 @@
 #include "utils/logger.hpp"
 
 namespace colistener {
-CommonAction::CommonAction() : curl_(nullptr), headers_(nullptr) {
+CommonAction::CommonAction() : curl_(nullptr), headers_(nullptr), dev_null_(nullptr) {
     curl_ = curl_easy_init();
     if (!curl_) {
         throw std::runtime_error("Failed to initialize CURL");
     }
+    
+    dev_null_ = fopen("/dev/null", "w");
+    if (!dev_null_) {
+        curl_easy_cleanup(curl_);
+        throw std::runtime_error("Failed to open /dev/null");
+    }
+    
     headers_ = curl_slist_append(nullptr, "Content-Type: application/json");
     endpoint_ = std::string(DEFAULT_URL) +
         ":" +
         std::string(DEFAULT_PORT) +
         std::string(DEFAULT_ROUTE);
+    
+    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, dev_null_);
 }
 
 CommonAction::~CommonAction() {
@@ -20,6 +29,9 @@ CommonAction::~CommonAction() {
     }
     if (curl_) {
         curl_easy_cleanup(curl_);
+    }
+    if (dev_null_) {
+        fclose(dev_null_);
     }
 }
 

@@ -13,15 +13,14 @@ const std::set<std::string> Listener::builtin_types_ = {
 };
 
 Listener::Listener() {
-    ros::NodeHandle nh;
     ros::NodeHandle private_nh("~");
 
     std::string log_dir;
     if (!private_nh.getParam("log_directory", log_dir)) {
         log_dir = "/tmp/colistener/log/";
-        COLOG_WARN("No log directory specified, using default: %s", log_dir.c_str());
     }
     colistener::Logger::getInstance().set_log_dir(log_dir);
+    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
 
     COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_dir.c_str());
