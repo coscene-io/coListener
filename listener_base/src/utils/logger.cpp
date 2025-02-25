@@ -104,23 +104,19 @@ std::string Logger::get_level_string(const LogLevel level) {
 }
 
 std::string Logger::get_current_time_str() {
-    const auto now = std::chrono::system_clock::now();
-    const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()).count() % 1000;
-
-    const auto time = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
-    ss << "." << std::setfill('0') << std::setw(3) << now_ms;
-    return ss.str();
+    std::time_t time = std::time(nullptr);
+    struct tm* timeinfo = std::localtime(&time);
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+    return std::string(buffer);
 }
 
 std::string Logger::get_current_date_str() {
-    const auto now = std::chrono::system_clock::now();
-    const auto time = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&time), "%Y-%m-%d");
-    return ss.str();
+    std::time_t time = std::time(nullptr);
+    struct tm* timeinfo = std::localtime(&time);
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d", timeinfo);
+    return std::string(buffer);
 }
 
 std::string Logger::get_log_file_name(const std::string& date) const {

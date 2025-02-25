@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <nlohmann/json.hpp>
+#include <utils/json.hpp>
 #include <sys/stat.h>
 
 namespace colistener {

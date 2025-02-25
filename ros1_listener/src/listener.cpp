@@ -13,31 +13,44 @@ const std::set<std::string> Listener::builtin_types_ = {
 };
 
 Listener::Listener() {
+    ros::NodeHandle nh;
     ros::NodeHandle private_nh("~");
 
     std::string log_dir;
-    private_nh.param<std::string>("log_directory", log_dir, "/tmp/colistener/log/");
+    if (!private_nh.getParam("log_directory", log_dir)) {
+        log_dir = "/tmp/colistener/log/";
+        COLOG_WARN("No log directory specified, using default: %s", log_dir.c_str());
+    }
     colistener::Logger::getInstance().set_log_dir(log_dir);
 
     COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_dir.c_str());
 
     std::string action_type;
-    private_nh.param<std::string>("action_type", action_type, "example");
+    if (!private_nh.getParam("action_type", action_type)) {
+        action_type = "example";
+        COLOG_WARN("No action type specified, using default: %s", action_type.c_str());
+    }
     action_ = colistener::Action::create(action_type);
     COLOG_INFO("action type: %s", action_type.c_str());
 
     std::string db_path;
     int persistence_expire_interval_secs;
-    private_nh.param<std::string>("persistence_file_path", db_path, "/tmp/colistener/persistence/ros2.db");
-    private_nh.param<int>("persistence_expire_secs", persistence_expire_interval_secs, 3600);
+    if (!private_nh.getParam("persistence_file_path", db_path)) {
+        db_path = "/tmp/colistener/persistence/ros1.db";
+        COLOG_WARN("No persistence file path specified, using default: %s", db_path.c_str());
+    }
+    if (!private_nh.getParam("persistence_expire_secs", persistence_expire_interval_secs)) {
+        persistence_expire_interval_secs = 3600;
+        COLOG_WARN("No persistence expire interval specified, using default: %d", persistence_expire_interval_secs);
+    }
     database_manager_.init(db_path, persistence_expire_interval_secs);
     COLOG_INFO("persistence_file: %s, expire_secs: %d", db_path.c_str(), persistence_expire_interval_secs);
 
     std::vector<std::string> topics;
     if (!private_nh.getParam("subscribe_topics", topics)) {
         topics = {"/error_code", "/error_event"};
-        COLOG_WARN("No topics specified, using default topic: %s", vector_to_string<std::string>(topics).c_str());
+        COLOG_WARN("No topics specified, using default topics: %s", vector_to_string<std::string>(topics).c_str());
     }
     COLOG_INFO("Subscribing to topics: %s", vector_to_string<std::string>(topics).c_str());
 

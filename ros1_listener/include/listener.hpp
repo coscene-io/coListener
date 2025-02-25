@@ -23,7 +23,7 @@
 #include <thread>
 
 #include <curl/curl.h>
-#include <nlohmann/json.hpp>
+#include <utils/json.hpp>
 #include <ros/ros.h>
 #include <topic_tools/shape_shifter.h>
 

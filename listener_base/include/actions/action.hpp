@@ -15,7 +15,7 @@
 #ifndef COLISTENER_ACTIONS_ACTION_H
 #define COLISTENER_ACTIONS_ACTION_H
 
-#include <nlohmann/json.hpp>
+#include <utils/json.hpp>
 #include <string>
 #include <vector>
 #include "colistener.hpp"

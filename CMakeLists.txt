@@ -1,5 +1,19 @@
-cmake_minimum_required(VERSION 3.10.2)
+message(STATUS "ROS_VERSION: " $ENV{ROS_VERSION})
+message(STATUS "ROS_DISTRO: " $ENV{ROS_DISTRO})
+message(STATUS "ROS_ROOT: " $ENV{ROS_ROOT})
+
+
+if("$ENV{ROS_VERSION}" STREQUAL "1")
+    cmake_minimum_required(VERSION 2.8.12)
+else()
+    cmake_minimum_required(VERSION 3.10.2)
+endif ()
 project(colistener)
+
+# 设置C++11标准
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -29,10 +43,6 @@ endmacro()
 find_package(catkin QUIET)
 find_package(ament_cmake QUIET)
 
-message(STATUS "ROS_VERSION: " $ENV{ROS_VERSION})
-message(STATUS "ROS_DISTRO: " $ENV{ROS_DISTRO})
-message(STATUS "ROS_ROOT: " $ENV{ROS_ROOT})
-
 find_program(GIT_SCM git DOC "Git version control")
 if(GIT_SCM)
     execute_process(
@@ -48,7 +58,8 @@ configure_file(listener_base/src/version.cpp.in
 
 
 find_package(CURL REQUIRED)
-find_package(SQLite3 REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SQLite3 REQUIRED sqlite3)
 
 add_library(colistener_base SHARED
         listener_base/src/actions/action.cpp
@@ -64,19 +75,20 @@ target_include_directories(colistener_base
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/listener_base/include>
         $<INSTALL_INTERFACE:include>
+        ${SQLite3_INCLUDE_DIRS}
 )
 
 target_link_libraries(colistener_base
         ${CURL_LIBRARIES}
         ${SQLite3_LIBRARIES})
 
-find_package(nlohmann_json QUIET)
-if(nlohmann_json_FOUND)
-    message(STATUS "nlohmann_json was found")
-    target_link_libraries(colistener_base nlohmann_json::nlohmann_json)
-else()
-    message(STATUS "nlohmann_json not found, will search at compile time")
-endif()
+#find_package(nlohmann_json QUIET)
+#if(nlohmann_json_FOUND)
+#    message(STATUS "nlohmann_json was found")
+#    target_link_libraries(colistener_base nlohmann_json::nlohmann_json)
+#else()
+#    message(STATUS "nlohmann_json not found, will search at compile time")
+#endif()
 
 
 if("$ENV{ROS_VERSION}" STREQUAL "1")
@@ -84,7 +96,7 @@ if("$ENV{ROS_VERSION}" STREQUAL "1")
         message(STATUS "Building with catkin")
         set(ROS_BUILD_TYPE "catkin")
 
-        add_compile_definitions(ROS1)
+        add_definitions(-DROS1)
 
         find_package(catkin REQUIRED COMPONENTS
             roslib roscpp topic_tools)
@@ -129,9 +141,9 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
     set(CMAKE_CXX_STANDARD 14)
 
     if("$ENV{ROS_DISTRO}" STREQUAL "foxy")
-        add_compile_definitions(ROS2_VERSION_FOXY)
+        add_definitions(-DROS2_VERSION_FOXY)
     else()
-        add_compile_definitions(ROS2_VERSION_HUMBLE)
+        add_definitions(-DROS2_VERSION_HUMBLE)
     endif()
 
     if(ament_cmake_FOUND)

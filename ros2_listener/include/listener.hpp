@@ -18,7 +18,7 @@
 #include <map>
 
 #include <rclcpp/rclcpp.hpp>
-#include <nlohmann/json.hpp>
+#include <utils/json.hpp>
 #include <rosidl_typesupport_introspection_cpp/message_introspection.hpp>
 
 #include "actions/action.hpp"

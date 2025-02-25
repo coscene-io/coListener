@@ -1,8 +1,13 @@
 <launch>
-    <param name="~subscribe_topics"  type="yaml" value="['/error_code', '/error_event']"/>
-    <param name="~persistence_expire_secs" value=3600/>
-    <param name="~persistence_file_path" value="/tmp/colistener/persistence/ros1.db"/>
-    <param name="~action_type" value="common"/>
-    <param name="~log_directory" value="/tmp/colistener/logs/"/>
-    <node pkg="colistener" type="colistener" name="colistener" output="screen"/>
+    <node pkg="colistener" type="colistener" name="colistener" output="screen">
+        <rosparam>
+            subscribe_topics:
+                - /error_report
+                - /event_tracking_report
+            persistence_expire_secs: 1800
+            persistence_file_path: "/tmp/colistener/persistence/ros1.db"
+            action_type: "common"
+            log_directory: "/tmp/colistener/logs/"
+        </rosparam>
+    </node>
 </launch>
