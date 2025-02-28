@@ -6,6 +6,7 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <sys/time.h>
 
 namespace colistener {
 Logger::Logger() : log_dir_("/tmp/colistener/logs/"), current_level_(LogLevel::INFO) {
@@ -104,11 +105,21 @@ std::string Logger::get_level_string(const LogLevel level) {
 }
 
 std::string Logger::get_current_time_str() {
-    std::time_t time = std::time(nullptr);
-    struct tm* timeinfo = std::localtime(&time);
-    char buffer[80];
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    
+    time_t rawtime = tv.tv_sec;
+    struct tm* timeinfo = std::localtime(&rawtime);
+    
+    char buffer[100];
     std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
-    return std::string(buffer);
+    
+    int milliseconds = tv.tv_usec / 1000;
+    
+    std::ostringstream oss;
+    oss << buffer << "." << std::setfill('0') << std::setw(3) << milliseconds;
+    
+    return oss.str();
 }
 
 std::string Logger::get_current_date_str() {

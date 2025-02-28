@@ -137,12 +137,17 @@ if("$ENV{ROS_VERSION}" STREQUAL "1")
         message(FATAL_ERROR "Could not find catkin")
     endif()
 elseif("$ENV{ROS_VERSION}" STREQUAL "2")
-
-    set(CMAKE_CXX_STANDARD 14)
-
     if("$ENV{ROS_DISTRO}" STREQUAL "foxy")
+        message(STATUS "define macro FOXY")
+        set(CMAKE_CXX_STANDARD 14)
+        set(CMAKE_CXX_STANDARD_REQUIRED ON) 
+
         add_definitions(-DROS2_VERSION_FOXY)
     else()
+        message(STATUS "define macro HUMBLE")
+        set(CMAKE_CXX_STANDARD 17)
+        set(CMAKE_CXX_STANDARD_REQUIRED ON) 
+        
         add_definitions(-DROS2_VERSION_HUMBLE)
     endif()
 
@@ -153,7 +158,7 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
         find_package(ament_cmake REQUIRED)
         find_package(rosgraph_msgs REQUIRED)
         find_package(rclcpp REQUIRED)
-        find_package(rclcpp_components REQUIRED)
+#        find_package(rclcpp_components REQUIRED)
         find_package(resource_retriever REQUIRED)
 
 
@@ -169,7 +174,7 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
                 $<INSTALL_INTERFACE:include>
         )
 
-        ament_target_dependencies(ros2_listener rclcpp rclcpp_components resource_retriever rosgraph_msgs)
+        ament_target_dependencies(ros2_listener rclcpp rosgraph_msgs resource_retriever)
         target_link_libraries(ros2_listener colistener_base ${CURL_LIBRARIES})
         enable_strict_compiler_warnings(ros2_listener)
         add_executable(colistener

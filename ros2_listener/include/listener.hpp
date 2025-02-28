@@ -25,12 +25,16 @@
 #include "persistence/database_manager.hpp"
 #include "utils/logger.hpp"
 #include "colistener.hpp"
-#include "generic_subscription.hpp"
 #include <mutex>
 #include <thread>
 #include <curl/curl.h>
 
+#ifdef ROS2_VERSION_FOXY
+#include "generic_subscription.hpp"
+#endif
+
 namespace ros2_listener {
+
 constexpr int64_t DEFAULT_MIN_QOS_DEPTH = 1;
 constexpr int64_t DEFAULT_MAX_QOS_DEPTH = 25;
 
@@ -60,13 +64,6 @@ private:
 
     std::vector<colistener::MessageField> build_message_fields(
         const rosidl_typesupport_introspection_cpp::MessageMembers* members);
-
-    static std::shared_ptr<GenericSubscription> create_generic_subscription(
-        const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr& topics_interface,
-        const std::string& topic,
-        const std::string& type,
-        const rclcpp::QoS& qos,
-        const std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>& callback);
 
     void deserialize_to_json(const uint8_t* buffer, size_t& offset,
                             const std::vector<colistener::MessageField>& fields,

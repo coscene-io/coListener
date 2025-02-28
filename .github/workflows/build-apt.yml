@@ -1,0 +1,96 @@
+name: build-apt.yml
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build-deb:
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distribution: [noetic, foxy, humble]
+        platform: [amd64, arm64]
+
+    name: Build deb (ROS ${{ matrix.ros_distribution }} - ${{ matrix.arch }})
+    runs-on: ${{ matrix.platform == 'arm64' && 'linux-arm-64-8c-32g-300gb' || 'ubuntu-latest' }}
+    container: coscene/ros:${{ matrix.ros_distribution }}-${{ matrix.platform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: src/colistener
+
+      - name: Generate debian/ directory and build .deb package
+        run: |
+          rosdep update --rosdistro=${{ matrix.ros_distribution }}
+          cd ./src/colistener
+          bloom-generate rosdebian --ros-distro ${{ matrix.ros_distribution }}
+          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -a${{ matrix.arch }}
+          ls .. -lah
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.ros_distribution }}-${{ matrix.arch }}
+          path: ./src/*.deb
+#
+#  build-apt-repo:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        distro: [ focal, jammy ]
+#
+#    name: Build APT Repository
+#    needs: build-deb
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Download all artifacts
+#        uses: actions/download-artifact@v4
+#        with:
+#          path: ./artifacts
+#          merge-multiple: true
+#
+#      - name: Generate apt-ftparchive.conf
+#        run: |
+#          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | gpg --batch --import
+#          cat <<EOF > ./artifacts/apt-ftparchive.conf
+#          APT {
+#            FTPArchive {
+#              Release {
+#                Origin "colistener";
+#                Label "colistener";
+#                Suite "${{ matrix.distro }}";
+#                Codename "${{ matrix.distro }}";
+#              }
+#            }
+#          }
+#          EOF
+#          ls -lah ./artifacts
+#
+#      - name: Build APT repo
+#        run: |
+#          mkdir -p dists/${{ matrix.distro }}/main/binary-amd64
+#          mkdir -p dists/${{ matrix.distro }}/main/binary-arm64
+#
+#          find ./artifacts -name "*${{ matrix.distro }}_amd64.deb" -exec cp {} ./dists/${{ matrix.distro }}/main/binary-amd64/ \;
+#          find ./artifacts -name "*${{ matrix.distro }}_arm64.deb" -exec cp {} ./dists/${{ matrix.distro }}/main/binary-arm64/ \;
+#
+#          dpkg-scanpackages dists/${{ matrix.distro }}/main/binary-amd64 /dev/null > dists/${{ matrix.distro }}/main/binary-amd64/Packages
+#          dpkg-scanpackages dists/${{ matrix.distro }}/main/binary-arm64 /dev/null > dists/${{ matrix.distro }}/main/binary-arm64/Packages
+#
+#          gzip -k -f dists/${{ matrix.distro }}/main/binary-amd64/Packages
+#          gzip -k -f dists/${{ matrix.distro }}/main/binary-arm64/Packages
+#
+#          apt-ftparchive release dists/${{ matrix.distro }} -c ./artifacts/apt-ftparchive.conf > dists/${{ matrix.distro }}/Release
+#          gpg --clearsign -o dists/${{ matrix.distro }}/InRelease dists/${{ matrix.distro }}/Release
+#          gpg -abs -o dists/${{ matrix.distro }}/Release.gpg dists/${{ matrix.distro }}/Release
+#
+#      - name: Upload APT repo to OSS
+#        uses: tvrcgo/oss-action@master
+#        with:
+#          key-id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
+#          key-secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
+#          region: oss-cn-hangzhou
+#          bucket: coscene-download
+#          assets: |
+#            ./dists/**:/colistener/dists/

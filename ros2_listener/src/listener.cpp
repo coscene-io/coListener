@@ -11,6 +11,8 @@
 #include <typesupport_helpers.hpp>
 
 #include "listener.hpp"
+
+#include "create_generic_subscription.hpp"
 #include "utils/logger.hpp"
 
 namespace ros2_listener {
@@ -97,7 +99,7 @@ void Listener::check_and_subscribe_topics() {
 #endif
 
 #ifdef ROS2_VERSION_FOXY
-                    auto subscriber = create_generic_subscription(
+                    auto subscriber = ros2_listener::create_generic_subscription(
                         this->get_node_topics_interface(),
                         topic, datatype, get_qos_from_topic(topic),
                         [this, topic, datatype](const std::shared_ptr<rclcpp::SerializedMessage>& msg) {
@@ -225,36 +227,6 @@ rclcpp::QoS Listener::get_qos_from_topic(const std::string& topic) const {
     }
     return qos;
 }
-
-std::shared_ptr<GenericSubscription> Listener::create_generic_subscription(
-    const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr& topics_interface,
-    const std::string& topic,
-    const std::string& type,
-    const rclcpp::QoS& qos,
-    const std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>& callback) {
-    const auto library_generic_subscriber = get_typesupport_library(
-        type, "rosidl_typesupport_cpp");
-    const auto type_support = get_typesupport_handle(
-        type, "rosidl_typesupport_cpp", library_generic_subscriber);
-    auto subscription = std::shared_ptr<GenericSubscription>();
-
-    try {
-        subscription = std::make_shared<GenericSubscription>(
-            topics_interface->get_node_base_interface(),
-            *type_support,
-            topic,
-            type,
-            qos,
-            callback);
-
-        topics_interface->add_subscription(subscription, nullptr);
-    }
-    catch (const std::runtime_error& ex) {
-        throw std::runtime_error("Error subscribing to topic '" + topic + "'. Error: " + ex.what());
-    }
-    return subscription;
-}
-
 
 void Listener::alignmentData(size_t& offset, const int length) {
     const auto alignment = offset % length;

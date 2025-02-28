@@ -80,7 +80,7 @@ struct MessageCache {
     };
 
     MessageCache(const std::string& topic, const std::string& msg, const std::string& msgType, const double& ts) {
-        this->id = 0;
+        this->id = -1;
         this->topic = topic;
         this->msg = msg;
         this->msgType = msgType;

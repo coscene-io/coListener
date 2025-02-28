@@ -16,6 +16,7 @@
 #include "persistence/database_manager.hpp"
 #include <mutex>
 #include <ctime>
+#include <sstream>
 
 namespace colistener {
 bool DatabaseManager::init(const std::string& db_path, int64_t expire_secs) {
@@ -75,22 +76,74 @@ bool DatabaseManager::create_table() const {
 bool DatabaseManager::insert_message(const MessageCache& message) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    const auto insert_sql =
+    message_cache_.push_back(message);
+
+    auto now = std::chrono::steady_clock::now();
+    bool should_flush =
+        message_cache_.size() >= cache_size_limit_ ||
+        (now - last_flush_time_) > flush_interval_;
+
+    if (should_flush) {
+        return flush_cache();
+    }
+
+    return true;
+}
+
+bool DatabaseManager::flush_cache() {
+    if (message_cache_.empty()) {
+        return true;
+    }
+
+    char* err_msg = nullptr;
+    if (sqlite3_exec(db_, "BEGIN TRANSACTION", nullptr, nullptr, &err_msg) != SQLITE_OK) {
+        COLOG_ERROR("Failed to begin transaction: %s", err_msg);
+        sqlite3_free(err_msg);
+        return false;
+    }
+    
+    const auto insert_sql = 
         "INSERT INTO messages (topic, message, datatype, timestamp) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(db_, insert_sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
+        sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
-
-    sqlite3_bind_text(stmt, 1, message.topic.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, message.msg.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, message.msgType.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_double(stmt, 4, message.ts);
-
-    rc = sqlite3_step(stmt);
+    
+    bool success = true;
+    for (const auto& message : message_cache_) {
+        sqlite3_reset(stmt);
+        sqlite3_bind_text(stmt, 1, message.topic.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, message.msg.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, message.msgType.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_double(stmt, 4, message.ts);
+        
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            success = false;
+            break;
+        }
+    }
+    
     sqlite3_finalize(stmt);
-    return rc == SQLITE_DONE;
+    
+    if (success) {
+        rc = sqlite3_exec(db_, "COMMIT", nullptr, nullptr, &err_msg);
+    } else {
+        rc = sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, &err_msg);
+    }
+    
+    if (rc != SQLITE_OK) {
+        COLOG_ERROR("Transaction failed: %s", err_msg);
+        sqlite3_free(err_msg);
+        return false;
+    }
+    
+    message_cache_.clear();
+    last_flush_time_ = std::chrono::steady_clock::now();
+
+    return success;
 }
 
 bool DatabaseManager::remove_message(const MessageCache& message) {
@@ -111,58 +164,79 @@ bool DatabaseManager::remove_message(const MessageCache& message) {
 }
 
 bool DatabaseManager::remove_messages(const std::vector<MessageCache>& messages) {
+    if (messages.empty()) {
+        return true; // If no messages to delete, return success immediately
+    }
+
     std::lock_guard<std::mutex> lock(mutex_);
 
-    const auto delete_sql = "DELETE FROM messages WHERE id = ?;";
-    sqlite3_stmt* stmt;
-    int rc = sqlite3_prepare_v2(db_, delete_sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        return false;
-    }
-    bool success = true;
-    for (const auto& message : messages) {
-        sqlite3_reset(stmt);
-        sqlite3_bind_int64(stmt, 1, message.id);
-
-        rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
-            success = false;
-            break;
+    if (messages.size() <= 500) {
+        std::stringstream sql;
+        sql << "DELETE FROM messages WHERE id IN (";
+        
+        for (size_t i = 0; i < messages.size(); ++i) {
+            if (i > 0) sql << ",";
+            sql << messages[i].id;
         }
-    }
-    sqlite3_finalize(stmt);
-    return success;
-}
-
-bool DatabaseManager::remove_messages(const std::unordered_map<int64_t, MessageCache>& messages) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    const char* delete_sql = "DELETE FROM messages WHERE id = ?;";
-    sqlite3_stmt* stmt;
-    int rc = sqlite3_prepare_v2(db_, delete_sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        return false;
-    }
-    bool success = true;
-    for (const auto& pair : messages) {
-        sqlite3_reset(stmt);
-        sqlite3_bind_int64(stmt, 1, pair.first);
-
-        rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
-            success = false;
-            break;
+        sql << ");";
+        
+        char* err_msg = nullptr;
+        int rc = sqlite3_exec(db_, sql.str().c_str(), nullptr, nullptr, &err_msg);
+        
+        if (rc != SQLITE_OK) {
+            COLOG_ERROR("Batch deletion failed: %s", err_msg ? err_msg : "Unknown error");
+            sqlite3_free(err_msg);
+            return false;
         }
+        
+        COLOG_INFO("Successfully deleted %zu messages in batch", messages.size());
+        return true;
     }
-    sqlite3_finalize(stmt);
-    return success;
+    else {
+        const auto delete_sql = "DELETE FROM messages WHERE id = ?;";
+        sqlite3_stmt* stmt;
+        int rc = sqlite3_prepare_v2(db_, delete_sql, -1, &stmt, nullptr);
+        
+        if (rc != SQLITE_OK) {
+            COLOG_ERROR("Failed to prepare delete statement: %s", sqlite3_errmsg(db_));
+            return false;
+        }
+        
+        bool success = true;
+        int processed = 0;
+        
+        for (const auto& message : messages) {
+            sqlite3_reset(stmt);
+            sqlite3_bind_int64(stmt, 1, message.id);
+            
+            rc = sqlite3_step(stmt);
+            if (rc != SQLITE_DONE) {
+                COLOG_ERROR("Failed to delete message ID %lld: %s", 
+                          (long long)message.id, sqlite3_errmsg(db_));
+                success = false;
+                break;
+            }
+            
+            processed++;
+            
+            // Log progress every 500 records
+            if (processed % 500 == 0) {
+                COLOG_INFO("Processed %d/%zu messages", processed, messages.size());
+            }
+        }
+        
+        sqlite3_finalize(stmt);
+        COLOG_INFO("Deletion operation completed, success: %s, processed %d/%zu messages", 
+                 success ? "yes" : "no", processed, messages.size());
+        return success;
+    }
 }
 
 std::vector<MessageCache> DatabaseManager::get_all_messages() {
     std::vector<MessageCache> messages;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-
+        flush_cache();
         const auto expired_time = std::time(nullptr) - expire_time_;
 
         const auto select_sql = "SELECT id, topic, message, datatype, timestamp FROM messages;";
@@ -182,7 +256,7 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
             if (ts > expired_time) {
                 messages.emplace_back(id, topic, msg, msgType, ts);
             } else {
-                expired_messages_.emplace(id, MessageCache{topic, msg, msgType, ts});
+                expired_messages_.emplace_back(id, topic, msg, msgType, ts);
             }
         }
 

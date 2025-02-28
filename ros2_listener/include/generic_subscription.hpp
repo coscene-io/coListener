@@ -18,6 +18,9 @@
 
 #include <memory>
 #include <string>
+
+#include "rclcpp/macros.hpp"
+#include "rclcpp/serialization.hpp"
 #include "rclcpp/subscription.hpp"
 
 namespace ros2_listener {

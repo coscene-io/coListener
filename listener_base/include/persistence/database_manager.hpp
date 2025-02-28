@@ -22,6 +22,8 @@
 #include <mutex>
 #include <sqlite3.h>
 #include "colistener.hpp"
+#include <chrono>
+#include <utils/logger.hpp>
 
 namespace colistener {
 class DatabaseManager {
@@ -42,15 +44,21 @@ public:
     bool remove_message(const MessageCache& message);
 
     bool remove_messages(const std::vector<MessageCache>& messages);
-    bool remove_messages(const std::unordered_map<int64_t, MessageCache>& messages);
+    // bool remove_messages(const std::unordered_map<int64_t, MessageCache>& messages);
     
     std::vector<MessageCache> get_all_messages();
+    bool flush_cache();
+
 private:
     bool create_table() const;
     sqlite3* db_{nullptr};
     int64_t expire_time_{0};
     std::mutex mutex_;
-    std::unordered_map<int64_t, MessageCache> expired_messages_;
+    std::vector<MessageCache> expired_messages_;
+    std::vector<MessageCache> message_cache_;
+    size_t cache_size_limit_{100};
+    std::chrono::time_point<std::chrono::steady_clock> last_flush_time_;
+    std::chrono::seconds flush_interval_{5};
 };
 
 
