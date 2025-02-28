@@ -11,7 +11,7 @@ jobs:
         ros_distribution: [noetic, foxy, humble]
         platform: [amd64, arm64]
 
-    name: Build deb (ROS ${{ matrix.ros_distribution }} - ${{ matrix.arch }})
+    name: Build deb (ROS ${{ matrix.ros_distribution }} - ${{ matrix.platform }})
     runs-on: ${{ matrix.platform == 'arm64' && 'linux-arm-64-8c-32g-300gb' || 'ubuntu-latest' }}
     container: coscene/ros:${{ matrix.ros_distribution }}-${{ matrix.platform }}
     steps:
@@ -22,16 +22,16 @@ jobs:
 
       - name: Generate debian/ directory and build .deb package
         run: |
-          rosdep update --rosdistro=${{ matrix.ros_distribution }}
+          rosdep update --include-eol-distros --rosdistro=${{ matrix.ros_distribution }}
           cd ./src/colistener
           bloom-generate rosdebian --ros-distro ${{ matrix.ros_distribution }}
-          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -a${{ matrix.arch }}
+          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -a${{ matrix.platform }}
           ls .. -lah
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.ros_distribution }}-${{ matrix.arch }}
+          name: ${{ matrix.ros_distribution }}-${{ matrix.platform }}
           path: ./src/*.deb
 #
 #  build-apt-repo:
