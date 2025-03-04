@@ -1,6 +1,7 @@
 name: build-apt.yml
 on:
   workflow_dispatch:
+  release:
   push:
 
 jobs:
@@ -8,89 +9,128 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ros_distribution: [noetic, foxy, humble]
-        platform: [amd64, arm64]
+        include:
+          - ros_distribution: noetic
+            platform: amd64
+            distro: focal
+            label: ubuntu-latest
+          - ros_distribution: noetic
+            platform: arm64
+            distro: focal
+            label: [ linux-arm-64-8c-32g-300gb ]
+          - ros_distribution: foxy
+            platform: amd64
+            distro: focal
+            label: ubuntu-latest
+          - ros_distribution: foxy
+            platform: arm64
+            distro: focal
+            label: [ linux-arm-64-8c-32g-300gb ]
+          - ros_distribution: humble
+            platform: amd64
+            distro: jammy
+            label: ubuntu-latest
+          - ros_distribution: humble
+            platform: arm64
+            distro: jammy
+            label: [ linux-arm-64-8c-32g-300gb ]
+          - ros_distribution: indigo
+            platform: armhf
+            distro: trusty
+            label: [ linux-arm-64-8c-32g-300gb ]
 
     name: Build deb (ROS ${{ matrix.ros_distribution }} - ${{ matrix.platform }})
-    runs-on: ${{ matrix.platform == 'arm64' && 'linux-arm-64-8c-32g-300gb' || 'ubuntu-latest' }}
-    container: coscene/ros:${{ matrix.ros_distribution }}-${{ matrix.platform }}
+    runs-on: ${{ matrix.label }}
+    container: 
+      image: coscene/ros:${{ matrix.ros_distribution }}-${{ matrix.platform }}
+    outputs:
+      download_urls: ${{ steps.set_urls.outputs.urls }}
+      matrix_result_noetic_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_noetic_amd64 }}
+      matrix_result_noetic_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_noetic_arm64 }}
+      matrix_result_foxy_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_foxy_amd64 }}
+      matrix_result_foxy_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_foxy_arm64 }}
+      matrix_result_humble_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_humble_amd64 }}
+      matrix_result_humble_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_humble_arm64 }}
+      matrix_result_indigo_armhf: ${{ steps.set_matrix_output.outputs.matrix_result_indigo_armhf }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          path: src/colistener
+        if: matrix.ros_distribution != 'indigo'
+        uses: actions/checkout@v4
+
+      - name: Checkout code (indigo)
+        if: matrix.ros_distribution == 'indigo'
+        run: |  
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+  
+          git clone https://github.com/${{ github.repository }}.git .
+          git checkout ${{ github.sha || github.ref }}
 
       - name: Generate debian/ directory and build .deb package
         run: |
+          apt search ros-indigo-catkin
           rosdep update --include-eol-distros --rosdistro=${{ matrix.ros_distribution }}
-          cd ./src/colistener
           bloom-generate rosdebian --ros-distro ${{ matrix.ros_distribution }}
-          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -a${{ matrix.platform }}
-          ls .. -lah
+          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -d -us -uc -a${{ matrix.platform }}
+          mkdir /artifacts
+          cp ../*.deb /artifacts/.
+          ls /artifacts -lah
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.ros_distribution }}-${{ matrix.platform }}
-          path: ./src/*.deb
-#
-#  build-apt-repo:
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        distro: [ focal, jammy ]
-#
-#    name: Build APT Repository
-#    needs: build-deb
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Download all artifacts
-#        uses: actions/download-artifact@v4
-#        with:
-#          path: ./artifacts
-#          merge-multiple: true
-#
-#      - name: Generate apt-ftparchive.conf
-#        run: |
-#          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | gpg --batch --import
-#          cat <<EOF > ./artifacts/apt-ftparchive.conf
-#          APT {
-#            FTPArchive {
-#              Release {
-#                Origin "colistener";
-#                Label "colistener";
-#                Suite "${{ matrix.distro }}";
-#                Codename "${{ matrix.distro }}";
-#              }
-#            }
-#          }
-#          EOF
-#          ls -lah ./artifacts
-#
-#      - name: Build APT repo
-#        run: |
-#          mkdir -p dists/${{ matrix.distro }}/main/binary-amd64
-#          mkdir -p dists/${{ matrix.distro }}/main/binary-arm64
-#
-#          find ./artifacts -name "*${{ matrix.distro }}_amd64.deb" -exec cp {} ./dists/${{ matrix.distro }}/main/binary-amd64/ \;
-#          find ./artifacts -name "*${{ matrix.distro }}_arm64.deb" -exec cp {} ./dists/${{ matrix.distro }}/main/binary-arm64/ \;
-#
-#          dpkg-scanpackages dists/${{ matrix.distro }}/main/binary-amd64 /dev/null > dists/${{ matrix.distro }}/main/binary-amd64/Packages
-#          dpkg-scanpackages dists/${{ matrix.distro }}/main/binary-arm64 /dev/null > dists/${{ matrix.distro }}/main/binary-arm64/Packages
-#
-#          gzip -k -f dists/${{ matrix.distro }}/main/binary-amd64/Packages
-#          gzip -k -f dists/${{ matrix.distro }}/main/binary-arm64/Packages
-#
-#          apt-ftparchive release dists/${{ matrix.distro }} -c ./artifacts/apt-ftparchive.conf > dists/${{ matrix.distro }}/Release
-#          gpg --clearsign -o dists/${{ matrix.distro }}/InRelease dists/${{ matrix.distro }}/Release
-#          gpg -abs -o dists/${{ matrix.distro }}/Release.gpg dists/${{ matrix.distro }}/Release
-#
-#      - name: Upload APT repo to OSS
-#        uses: tvrcgo/oss-action@master
-#        with:
-#          key-id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
-#          key-secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
-#          region: oss-cn-hangzhou
-#          bucket: coscene-download
-#          assets: |
-#            ./dists/**:/colistener/dists/
+      - name: Install and Configure ossutil
+        shell: bash
+        run: |
+          curl https://gosspublic.alicdn.com/ossutil/install.sh | bash
+          ossutil config -e oss-cn-hangzhou.aliyuncs.com -i ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }} -k ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
+          
+      - name: Upload latest files to oss
+        id: set_urls
+        shell: bash
+        run: |
+          urls=""          
+          for file in /artifacts/*.deb; do
+            filename=$(basename "$file")
+            echo "Uploading file: $file as $filename"
+            ossutil cp -f $file oss://coscene-download/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename
+            download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename"
+            
+            # 添加到输出变量
+            urls="${urls}${{ matrix.platform }},${{ matrix.ros_distribution }},$filename,$download_url;"
+            
+            echo "Download url: $download_url"
+          done
+          echo "urls=$urls" >> $GITHUB_OUTPUT
+          echo "urls: $urls"
+          
+      - name: Set matrix output
+        id: set_matrix_output
+        run: |
+          matrix_key="${{ matrix.ros_distribution }}_${{ matrix.platform }}"
+          echo "matrix_result_${matrix_key}=${{ steps.set_urls.outputs.urls }}" >> $GITHUB_OUTPUT
+          echo "set output: matrix_result_${matrix_key}=${{ steps.set_urls.outputs.urls }}"
+
+  Download-list:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create workflow summary
+        run: |
+          echo "## All Download URLs" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | ROS Distribution | Package | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
+          
+          URLS=""
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_noetic_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_noetic_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_foxy_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_foxy_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_humble_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_humble_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_indigo_armhf }};"
+          
+          IFS=';' read -ra URL_ARRAY <<< "$URLS"
+          for url_item in "${URL_ARRAY[@]}"; do
+            if [ -n "$url_item" ]; then
+              IFS=',' read -ra ITEM <<< "$url_item"
+              echo "| ${ITEM[0]} | ${ITEM[1]} | ${ITEM[2]} | [${ITEM[3]}](${ITEM[3]}) |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
