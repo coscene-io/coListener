@@ -93,10 +93,7 @@ jobs:
             ossutil cp -f $file oss://coscene-download/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename
             download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename"
             
-            # 添加到输出变量
-            urls="${urls}${{ matrix.platform }},${{ matrix.ros_distribution }},$filename,$download_url;"
-            
-            echo "Download url: $download_url"
+            urls="${urls}${{ matrix.platform }},${{ matrix.ros_distribution }},${{ matrix.distro }},$download_url;"
           done
           echo "urls=$urls" >> $GITHUB_OUTPUT
           echo "urls: $urls"
@@ -115,7 +112,7 @@ jobs:
       - name: Create workflow summary
         run: |
           echo "## All Download URLs" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | ROS Distribution | Package | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | ROS Distro | Ubuntu Distro | URL |" >> $GITHUB_STEP_SUMMARY
           echo "| --- | --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
           
           URLS=""
