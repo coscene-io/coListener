@@ -71,7 +71,7 @@ jobs:
           apt search ros-indigo-catkin
           rosdep update --include-eol-distros --rosdistro=${{ matrix.ros_distribution }}
           bloom-generate rosdebian --ros-distro ${{ matrix.ros_distribution }}
-          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -d -us -uc -a${{ matrix.platform }}
+          DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -a${{ matrix.platform }}
           mkdir /artifacts
           cp ../*.deb /artifacts/.
           ls /artifacts -lah
