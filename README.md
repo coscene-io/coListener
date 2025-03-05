@@ -47,16 +47,16 @@ ROS 环境。
   ```
     # ROS1
     cd ~/catkin_ws/src
-    git clone https://github.com/your-org/colistener.git
+    git clone https://github.com/coscene-io/coListener.git
     cd ..
-    catkin_make
-    source devel/setup.bash
+    catkin_make install
+    source install/setup.bash
     
     # ROS2
     cd ~/ros2_ws/src
-    git clone https://github.com/your-org/colistener.git
+    git clone https://github.com/coscene-io/coListener.git
     cd ..
-    colcon build --packages-select colistener
+    colcon build
     source install/setup.bash
   ```
 
