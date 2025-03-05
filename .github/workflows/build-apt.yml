@@ -66,6 +66,19 @@ jobs:
           git clone https://github.com/${{ github.repository }}.git .
           git checkout ${{ github.sha || github.ref }}
 
+      - name: Update version in package.xml
+        if: github.event_name == 'release' || github.ref_type == 'tag'
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG_VERSION=$(echo ${{ github.event.release.tag_name }} | sed 's/^v//')
+          else
+            TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
+          fi
+          
+          echo "检测到标签版本: $TAG_VERSION"
+          sed -i "s/<version>[0-9]*\.[0-9]*\.[0-9]*<\/version>/<version>$TAG_VERSION<\/version>/" package.xml
+          grep "<version>" package.xml
+
       - name: Generate debian/ directory and build .deb package
         run: |
           apt search ros-indigo-catkin
@@ -91,6 +104,7 @@ jobs:
             filename=$(basename "$file")
             echo "Uploading file: $file as $filename"
             ossutil cp -f $file oss://coscene-download/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename
+            ossutil cp -f $file oss://coscene-download/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-noetic-colistener_latest-0${{ matrix.distro }}_${{ matrix.platform }}.deb
             download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename"
             
             urls="${urls}${{ matrix.platform }},${{ matrix.ros_distribution }},${{ matrix.distro }},$download_url;"
