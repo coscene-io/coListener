@@ -82,15 +82,6 @@ target_link_libraries(colistener_base
         ${CURL_LIBRARIES}
         ${SQLite3_LIBRARIES})
 
-#find_package(nlohmann_json QUIET)
-#if(nlohmann_json_FOUND)
-#    message(STATUS "nlohmann_json was found")
-#    target_link_libraries(colistener_base nlohmann_json::nlohmann_json)
-#else()
-#    message(STATUS "nlohmann_json not found, will search at compile time")
-#endif()
-
-
 if("$ENV{ROS_VERSION}" STREQUAL "1")
     if(catkin_FOUND)
         message(STATUS "Building with catkin")

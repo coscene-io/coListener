@@ -145,10 +145,48 @@ RosDataType Listener::convert_to_rostype(const std::string& type) {
     }
 }
 
-// TODO(fei): DCL56-CPP remove recursion, just like ros2 listener did.
+std::vector<colistener::MessageField> Listener::parse_message_definition(const std::string& definition) {
+    std::map<std::string, std::string> message_sections;
+    std::string current_msg_type;
+    std::string current_section;
+    bool first_section = true;
+    std::string main_section;
+
+    std::istringstream full_iss(definition);
+    std::string line;
+    while (std::getline(full_iss, line)) {
+        if (line.find("================================================================================") !=
+            std::string::npos) {
+            if (first_section) {
+                main_section = current_section;
+                first_section = false;
+            } else if (!current_msg_type.empty()) {
+                message_sections[current_msg_type] = current_section;
+            }
+            current_section.clear();
+            continue;
+        }
+
+        if (line.find("MSG: ") == 0) {
+            current_msg_type = line.substr(5);
+            continue;
+        }
+
+        current_section += line + "\n";
+    }
+    
+    if (!first_section && !current_msg_type.empty()) {
+        message_sections[current_msg_type] = current_section;
+    } else if (first_section) {
+        main_section = current_section;
+    }
+
+    return parse_section(main_section, message_sections);
+}
+
 std::vector<colistener::MessageField> Listener::parse_section(const std::string& section,
-                                                              const std::map<std::string, std::string>&
-                                                              message_sections) {
+                                                          const std::map<std::string, std::string>&
+                                                          message_sections) {
     std::vector<colistener::MessageField> fields;
     std::istringstream iss(section);
     std::string line;
@@ -157,13 +195,13 @@ std::vector<colistener::MessageField> Listener::parse_section(const std::string&
         if (line.empty() || line[0] == '#') {
             continue;
         }
-        if (line.find("================================================================================") !=
-            std::string::npos) {
-            break;
-        }
 
         line.erase(line.find_last_not_of(" \t\r\n") + 1);
         if (line.empty()) {
+            continue;
+        }
+        
+        if (line.find('=') != std::string::npos) {
             continue;
         }
 
@@ -227,38 +265,6 @@ std::vector<colistener::MessageField> Listener::parse_section(const std::string&
     return fields;
 }
 
-std::vector<colistener::MessageField> Listener::parse_message_definition(const std::string& definition) {
-    std::map<std::string, std::string> message_sections;
-    std::string current_msg_type;
-    std::string current_section;
-
-    std::istringstream full_iss(definition);
-    std::string line;
-    while (std::getline(full_iss, line)) {
-        if (line.find("================================================================================") !=
-            std::string::npos) {
-            if (!current_msg_type.empty()) {
-                message_sections[current_msg_type] = current_section;
-            }
-            current_section.clear();
-            continue;
-        }
-
-        if (line.find("MSG: ") == 0) {
-            current_msg_type = line.substr(5);
-            continue;
-        }
-
-        current_section += line + "\n";
-    }
-    if (!current_msg_type.empty()) {
-        message_sections[current_msg_type] = current_section;
-    }
-
-    return parse_section(definition, message_sections);
-}
-
-// TODO(fei): DCL56-CPP remove recursion, just list ros2 listener did.
 void Listener::deserialize_to_json(const uint8_t* buffer, size_t& offset,
                                    const std::vector<colistener::MessageField>& fields,
                                    nlohmann::json& json_msg) {
