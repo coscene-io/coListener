@@ -34,6 +34,14 @@ jobs:
             platform: arm64
             distro: jammy
             label: [ linux-arm-64-8c-32g-300gb ]
+          - ros_distribution: melodic
+            platform: amd64
+            distro: bionic
+            label: ubuntu-latest
+          - ros_distribution: melodic
+            platform: arm64
+            distro: bionic
+            label: [ linux-arm-64-8c-32g-300gb ]
           - ros_distribution: indigo
             platform: armhf
             distro: trusty
