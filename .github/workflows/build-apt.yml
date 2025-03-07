@@ -55,6 +55,8 @@ jobs:
       download_urls: ${{ steps.set_urls.outputs.urls }}
       matrix_result_noetic_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_noetic_amd64 }}
       matrix_result_noetic_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_noetic_arm64 }}
+      matrix_result_melodic_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_melodic_amd64 }}
+      matrix_result_melodic_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_melodic_arm64 }}
       matrix_result_foxy_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_foxy_amd64 }}
       matrix_result_foxy_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_foxy_arm64 }}
       matrix_result_humble_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_humble_amd64 }}
@@ -66,11 +68,12 @@ jobs:
         if: matrix.ros_distribution != 'indigo' && matrix.ros_distribution != 'melodic'
         uses: actions/checkout@v4
 
-      - name: Checkout code (indigo)
+      - name: Checkout code (indigo/melodic)
         if: matrix.ros_distribution == 'indigo' || matrix.ros_distribution == 'melodic'
         run: |  
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-  
+          git config --global --add safe.directory /__w/coListener/coListener
+          
           git clone https://github.com/${{ github.repository }}.git .
           git checkout ${{ github.sha || github.ref }}
 
@@ -140,6 +143,8 @@ jobs:
           URLS=""
           URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_noetic_amd64 }};"
           URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_noetic_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_melodic_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_melodic_arm64 }};"
           URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_foxy_amd64 }};"
           URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_foxy_arm64 }};"
           URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_humble_amd64 }};"
