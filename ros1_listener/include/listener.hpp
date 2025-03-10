@@ -45,6 +45,7 @@ private:
     ros::NodeHandle nh_;
 
     std::vector<ros::Subscriber> subscribers_;
+    mutable std::mutex message_definitions_mutex_;
     std::map<std::string, std::vector<colistener::MessageField>> message_definitions_;
     static const std::set<std::string> builtin_types_;
     std::shared_ptr<colistener::Action> action_;

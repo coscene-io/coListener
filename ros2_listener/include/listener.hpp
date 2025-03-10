@@ -46,13 +46,16 @@ public:
 private:
     const bool system_is_little_endian_;
     std::vector<rclcpp::SubscriptionBase::SharedPtr> subscribers_;
-    std::map<std::string, std::vector<colistener::MessageField>> message_definitions_;
     std::vector<std::string> pending_topics_;
-    rclcpp::TimerBase::SharedPtr retry_timer_;
 
+    rclcpp::TimerBase::SharedPtr retry_timer_;
     rclcpp::TimerBase::SharedPtr send_timer_;
+
     std::shared_ptr<colistener::Action> action_;
     colistener::DatabaseManager database_manager_;
+
+    mutable std::mutex message_definitions_mutex_;
+    std::unordered_map<std::string, std::vector<colistener::MessageField>> message_definitions_;
 
     void check_and_subscribe_topics();
 
@@ -99,6 +102,8 @@ private:
         }
         return dest.value;
     }
+
+    const std::vector<colistener::MessageField>& get_or_build_fields(const std::string& datatype);
 };
 } // namespace ros2_listener
 

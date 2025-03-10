@@ -2,7 +2,6 @@ message(STATUS "ROS_VERSION: " $ENV{ROS_VERSION})
 message(STATUS "ROS_DISTRO: " $ENV{ROS_DISTRO})
 message(STATUS "ROS_ROOT: " $ENV{ROS_ROOT})
 
-
 if("$ENV{ROS_VERSION}" STREQUAL "1")
     cmake_minimum_required(VERSION 2.8.12)
 else()
@@ -147,12 +146,8 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
         set(ROS_BUILD_TYPE "ament_cmake")
 
         find_package(ament_cmake REQUIRED)
-        find_package(rosgraph_msgs REQUIRED)
+        find_package(ament_index_cpp REQUIRED)
         find_package(rclcpp REQUIRED)
-#        find_package(rclcpp_components REQUIRED)
-        find_package(resource_retriever REQUIRED)
-
-
         add_library(ros2_listener SHARED
                 ros2_listener/src/typesupport_helpers.cpp
                 ros2_listener/src/listener.cpp
@@ -165,7 +160,7 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
                 $<INSTALL_INTERFACE:include>
         )
 
-        ament_target_dependencies(ros2_listener rclcpp rosgraph_msgs resource_retriever)
+        ament_target_dependencies(ros2_listener rclcpp ament_index_cpp)
         target_link_libraries(ros2_listener colistener_base ${CURL_LIBRARIES})
         enable_strict_compiler_warnings(ros2_listener)
         add_executable(colistener
@@ -180,7 +175,7 @@ elseif("$ENV{ROS_VERSION}" STREQUAL "2")
                 ${rclcpp_INCLUDE_DIRS}
         )
         target_link_libraries(colistener ros2_listener)
-        ament_target_dependencies(colistener rclcpp)
+        ament_target_dependencies(colistener rclcpp ament_index_cpp)
         enable_strict_compiler_warnings(colistener)
 
     else()

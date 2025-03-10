@@ -27,7 +27,7 @@ Listener::Listener() : Node("colistener"),
                colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_directory.c_str());
 
-    this->declare_parameter("action_type", "common");
+    this->declare_parameter("action_type", "example");
     const std::string action_type = this->get_parameter("action_type").as_string();
     action_ = colistener::Action::create(action_type);
     COLOG_INFO("action_type: %s", action_type.c_str());
@@ -40,7 +40,7 @@ Listener::Listener() : Node("colistener"),
     COLOG_INFO("persistence_file: %s, expire_secs: %d", persistence_file.c_str(),
                persistence_secs);
 
-    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/static_uint8_align", "/error_event"});
+    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/error_code", "/error_event"});
     const std::vector<std::string> topics = this->get_parameter("subscribe_topics").as_string_array();
     pending_topics_ = topics;
     COLOG_INFO("Subscribing to topics: %s",
@@ -124,29 +124,46 @@ void Listener::check_and_subscribe_topics() {
     }
 }
 
+const std::vector<colistener::MessageField>& Listener::get_or_build_fields(const std::string& datatype) {
+    std::lock_guard<std::mutex> lock(message_definitions_mutex_);
+
+    auto it = message_definitions_.find(datatype);
+    if (it != message_definitions_.end()) {
+        return it->second;
+    }
+
+    auto library = get_typesupport_library(
+        datatype, "rosidl_typesupport_introspection_cpp");
+
+    const auto type_support = get_typesupport_handle(
+        datatype,
+        "rosidl_typesupport_introspection_cpp",
+        library);
+
+    const auto members = static_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(
+        type_support->data);
+
+
+    auto result = message_definitions_.insert(std::make_pair(
+        datatype, 
+        build_message_fields(members)));
+        
+    return result.first->second;
+}
+
 void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
                         const std::string& topic,
                         const std::string& datatype) {
     try {
-        const auto library = get_typesupport_library(
-            datatype, "rosidl_typesupport_introspection_cpp");
-
-        const auto type_support = get_typesupport_handle(
-            datatype,
-            "rosidl_typesupport_introspection_cpp",
-            library);
-
-        const auto members = static_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(
-            type_support->data);
-
-        const auto fields = build_message_fields(members);
+        const auto& fields = get_or_build_fields(datatype);
+        
         nlohmann::json json_msg;
         size_t offset = 0;
         const auto msg_struct = msg->get_rcl_serialized_message();
 
-        // 从CDR头获取消息的端序信息 (第二个字节: 0x00=大端, 0x01=小端)
         bool msg_is_little_endian = (msg_struct.buffer[1] == 0x01);
-        deserialize_to_json(&msg_struct.buffer[4], offset, fields, json_msg, msg_is_little_endian);
+        deserialize_to_json(&msg_struct.buffer[4], offset, fields, 
+                          json_msg, msg_is_little_endian);
 
         database_manager_.insert_message(colistener::MessageCache{
             topic,

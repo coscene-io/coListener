@@ -78,9 +78,14 @@ void Listener::callback(const boost::shared_ptr<topic_tools::ShapeShifter const>
     const std::string& datatype = msg->getDataType();
     const std::string& definition = msg->getMessageDefinition();
 
-    auto it = message_definitions_.find(datatype);
-    if (it == message_definitions_.end()) {
-        message_definitions_[datatype] = parse_message_definition(definition);
+    std::vector<colistener::MessageField> fields;
+    {
+        std::lock_guard<std::mutex> lock(message_definitions_mutex_);
+        auto it = message_definitions_.find(datatype);
+        if (it == message_definitions_.end()) {
+            message_definitions_[datatype] = parse_message_definition(definition);
+        }
+        fields = message_definitions_[datatype];
     }
 
     const size_t len = msg->size();
