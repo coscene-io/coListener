@@ -32,7 +32,6 @@ bool ExampleAction::execute(const std::vector<MessageCache>& messages) {
         json_array.push_back(item);
     }
     COLOG_INFO("batch send messages: %s", json_array.dump().c_str());
-    std::cout << json_array.dump() << std::endl;
     return true;
 }
 }

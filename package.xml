@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>colistener</name>
-  <version>0.0.1</version>
-  <description>Topic listener</description>
+  <version>1.0.2</version>
+  <description>Universal ROS1/ROS2 topic listener, supporting cross-platform subscription and processing of ROS topic data</description>
   <maintainer email="coscene@coscene.io">fei</maintainer>
   <license>Apache License 2.0</license>
 
