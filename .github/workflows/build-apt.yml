@@ -102,7 +102,7 @@ jobs:
           DEB_FILENAME=$(basename $(ls $GITHUB_WORKSPACE/artifacts/*.deb))
           echo "DEB_FILENAME=$DEB_FILENAME" >> $GITHUB_ENV
           
-          download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-cobridge_latest_${{ matrix.platform }}.deb"
+          download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-colistener_latest_${{ matrix.platform }}.deb"
           echo "download url: $download_url"
           echo $GITHUB_REPOSITORY
           
