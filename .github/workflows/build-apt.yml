@@ -113,12 +113,12 @@ jobs:
       - name: Update APT Source
         uses: coscene-io/update-apt-source@test
         with:
-          ubuntu-distro: ${{ matrix.distro }}
-          deb-paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
+          ubuntu_distro: ${{ matrix.distro }}
+          deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
           architectures: ${{ matrix.platform }}
-          access-key-id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
-          access-key-secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          access_key_id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
+          access_key_secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
   Download-list:
     needs: build-deb-package
