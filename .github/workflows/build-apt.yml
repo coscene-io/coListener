@@ -107,7 +107,7 @@ jobs:
           echo $GITHUB_REPOSITORY
           
           matrix_key="${{ matrix.ros_distribution }}_${{ matrix.platform }}"
-          echo "matrix_result_${matrix_key}=$download_url" >> $GITHUB_OUTPUT
+          echo "matrix_result_${matrix_key}=${{ matrix.platform }},${{ matrix.ros_distribution }},${{ matrix.distro }},$download_url" >> $GITHUB_OUTPUT
           echo "set output: matrix_result_${matrix_key}=$download_url"
 
       - name: Update APT Source
