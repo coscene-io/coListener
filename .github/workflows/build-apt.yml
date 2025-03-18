@@ -111,7 +111,7 @@ jobs:
           echo "set output: matrix_result_${matrix_key}=$download_url"
 
       - name: Update APT Source
-        uses: coscene-io/update-apt-source@main
+        uses: coscene-io/update-apt-source@test
         with:
           ubuntu_distro: ${{ matrix.distro }}
           deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
