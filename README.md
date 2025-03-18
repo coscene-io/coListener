@@ -32,15 +32,17 @@ ROS 环境。
 
 ## 下载deb安装
 
-| Platform | ROS Distro | Ubuntu Distro | URL                                                                                                                                            |
-|----------|------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| amd64    | noetic     | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/focal/main/binary-amd64/ros-noetic-colistener_latest-0focal_amd64.deb   |
-| arm64    | noetic     | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/focal/main/binary-arm64/ros-noetic-colistener_latest-0focal_arm64.deb   |
-| amd64    | foxy       | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/focal/main/binary-amd64/ros-foxy-colistener_latest-0focal_amd64.deb     |
-| arm64    | foxy       | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/focal/main/binary-arm64/ros-foxy-colistener_latest-0focal_arm64.deb     |
-| amd64    | humble     | jammy         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/jammy/main/binary-amd64/ros-humble-colistener_latest-0jammy_amd64.deb   |
-| arm64    | humble     | jammy         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/jammy/main/binary-arm64/ros-humble-colistener_latest-0jammy_arm64.deb   |
-| armhf    | indigo     | trusty        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/trusty/main/binary-armhf/ros-indigo-colistener_latest-0trusty_armhf.deb |
+| Platform | ROS Distro | Ubuntu Distro | URL                                                                                                                                             |
+|----------|------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| amd64    | noetic     | 	focal        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-amd64/ros-noetic-colistener_latest_amd64.deb   |
+| arm64    | noetic     | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-arm64/ros-noetic-colistener_latest_arm64.deb   |
+| amd64    | melodic    | bionic        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/bionic/main/binary-amd64/ros-melodic-colistener_latest_amd64.deb |
+| arm64    | melodic    | bionic        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/bionic/main/binary-arm64/ros-melodic-colistener_latest_arm64.deb |
+| amd64    | foxy       | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-amd64/ros-foxy-colistener_latest_amd64.deb     |
+| arm64    | foxy       | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-arm64/ros-foxy-colistener_latest_arm64.deb     |
+| amd64    | humble     | jammy         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/jammy/main/binary-amd64/ros-humble-colistener_latest_amd64.deb   |
+| arm64    | humble     | jammy         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/jammy/main/binary-arm64/ros-humble-colistener_latest_arm64.deb   |
+| armhf    | indigo     | trusty        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/trusty/main/binary-armhf/ros-indigo-colistener_latest_armhf.deb  |
 
 ## 从源码构建 (推荐)
 
