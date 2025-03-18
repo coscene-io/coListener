@@ -83,7 +83,7 @@ ROS 环境。
 
 ### 配置参数
 
-**ROS1 配置文件路径： /opt/ros/noetic/share/colistener/launch/colistener.launch**
+**ROS1 配置文件路径： /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch**
 
 **ROS2 配置文件路径： /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch.xml**
 
@@ -94,6 +94,8 @@ ROS 环境。
 | persistence_file_path   | 字符串   | "/tmp/colistener/persistence/ros1.db" 或 "/tmp/colistener/persistence/ros2.db" | 持久化数据库文件路径  |
 | action_type             | 字符串   | "common"                                                                      | 动作类型        |
 | log_directory           | 字符串   | "/tmp/colistener/logs/"                                                       | 日志存储目录      |
+
+**❗修改配置文件后，需要重启coListener**
 
 ## 构建发布包
 
