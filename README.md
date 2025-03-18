@@ -26,8 +26,11 @@ ROS 环境。
 
 使用 apt 安装
 
-  ```
-   TBD
+  ```bash
+    curl -fsSL https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/coscene.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/coscene.gpg
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source $(. /etc/os-release && echo $UBUNTU_CODENAME) main stable" | sudo tee /etc/apt/sources.list.d/coscene.list
+    sudo apt update
+    sudo apt install ros-$ROS_DISTRO-colistener
   ```
 
 ## 下载deb安装
