@@ -1,8 +1,8 @@
-# colistener
+# coListener
 
 ## 项目介绍
 
-colistener 是一个通用的 ROS 话题监听器，可以订阅指定的 ROS 话题并进行数据处理。它同时支持 ROS1 和 ROS2，能够自动适应不同的
+coListener 是一个通用的 ROS 话题监听器，可以订阅指定的 ROS 话题并进行数据处理。它同时支持 ROS1 和 ROS2，能够自动适应不同的
 ROS 环境。
 
 ## 特点
@@ -28,7 +28,7 @@ ROS 环境。
 
   ```bash
     curl -fsSL https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/coscene.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/coscene.gpg
-    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source $(. /etc/os-release && echo $UBUNTU_CODENAME) main stable" | sudo tee /etc/apt/sources.list.d/coscene.list
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/coscene.list
     sudo apt update
     sudo apt install ros-$ROS_DISTRO-colistener
   ```
@@ -69,17 +69,25 @@ ROS 环境。
 
 * ROS1
   ```
+  # 使用前需要先source ROS 环境变量（e.g.: source /opt/ros/noetic/setup.bash）
   roslaunch colistener colistener.launch
   ```
 
 * ROS2
   ```
+  # 使用前需要先source ROS 环境变量（e.g.: source /opt/ros/humble/setup.bash）
   ros2 launch colistener colistener.launch.xml
   ```
+  
+* 规则引擎相关内容见： [添加规则](https://docs.coscene.cn/docs/use-case/data-diagnosis/add-rule)
 
 ### 配置参数
 
-| 参数名                     | 类型    | 默认值                                                                           | 描述          |
+**ROS1 配置文件路径： /opt/ros/noetic/share/colistener/launch/colistener.launch**
+
+**ROS2 配置文件路径： /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch.xml**
+
+| 参数名                     | 数据类型  | 默认值                                                                           | 描述          |
 |-------------------------|-------|-------------------------------------------------------------------------------|-------------|
 | subscribe_topics        | 字符串数组 | ['/error_report', '/event_tracking_report']                                   | 要订阅的话题列表    |
 | persistence_expire_secs | 整数    | 1800                                                                          | 消息数据过期时间(秒) |
