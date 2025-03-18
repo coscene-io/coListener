@@ -104,7 +104,7 @@ jobs:
           
           download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-cobridge_latest_${{ matrix.platform }}.deb"
           echo "download url: $download_url"
-          ehho $GITHUB_REPOSITORY
+          echo $GITHUB_REPOSITORY
           
           matrix_key="${{ matrix.ros_distribution }}_${{ matrix.platform }}"
           echo "matrix_result_${matrix_key}=$download_url" >> $GITHUB_OUTPUT
