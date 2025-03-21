@@ -1,17 +1,32 @@
+// Copyright 2025 coScene
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <algorithm>
 #include <sstream>
 #include <cstring>
 #include <stdexcept>
+#include <string>
 #include <fstream>
+#include <memory>
 #include <stack>
+#include <vector>
 #include <utility>
 
-#include <rclcpp/serialization.hpp>
 #include <rosidl_runtime_c/message_type_support_struct.h>
 #include <rosidl_typesupport_introspection_cpp/field_types.hpp>
 #include <typesupport_helpers.hpp>
-
 #include "listener.hpp"
-
 #include "create_generic_subscription.hpp"
 #include "utils/logger.hpp"
 
@@ -143,11 +158,9 @@ const std::vector<colistener::MessageField>& Listener::get_or_build_fields(const
     const auto members = static_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(
         type_support->data);
 
-
     auto result = message_definitions_.insert(std::make_pair(
-        datatype, 
+        datatype,
         build_message_fields(members)));
-        
     return result.first->second;
 }
 
@@ -156,15 +169,13 @@ void Listener::callback(const std::shared_ptr<rclcpp::SerializedMessage>& msg,
                         const std::string& datatype) {
     try {
         const auto& fields = get_or_build_fields(datatype);
-        
         nlohmann::json json_msg;
         size_t offset = 0;
         const auto msg_struct = msg->get_rcl_serialized_message();
 
         bool msg_is_little_endian = (msg_struct.buffer[1] == 0x01);
-        deserialize_to_json(&msg_struct.buffer[4], offset, fields, 
+        deserialize_to_json(&msg_struct.buffer[4], offset, fields,
                           json_msg, msg_is_little_endian);
-
         database_manager_.insert_message(colistener::MessageCache{
             topic,
             json_msg.dump(),
@@ -453,7 +464,7 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
             offset += sizeof(uint32_t);
 
             if (str_len > 0) {
-                std::string str(reinterpret_cast<const char*>(buffer + offset), str_len - 1); // remove null
+                std::string str(reinterpret_cast<const char*>(buffer + offset), str_len - 1);
                 offset += str_len;
                 value = str;
             } else {
@@ -550,4 +561,4 @@ std::vector<colistener::MessageField> Listener::build_message_fields(
 
     return fields;
 }
-} // namespace ros2_listener
+}  // namespace ros2_listener

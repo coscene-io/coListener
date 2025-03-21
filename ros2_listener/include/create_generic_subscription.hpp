@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef ROS2_LISTENER_CREATE_GENERIC_SUBSCRIPTION_H
-#define ROS2_LISTENER_CREATE_GENERIC_SUBSCRIPTION_H
+#ifndef CREATE_GENERIC_SUBSCRIPTION_HPP_
+#define CREATE_GENERIC_SUBSCRIPTION_HPP_
 
 #include <functional>
 #include <memory>
@@ -58,8 +58,5 @@ std::shared_ptr<GenericSubscription> create_generic_subscription(
 
     return subscription;
 }
-}  // namespace cobridge
-
-
-
-#endif // ROS2_LISTENER_CREATE_GENERIC_SUBSCRIPTION_H
+}  // namespace ros2_listener
+#endif  // CREATE_GENERIC_SUBSCRIPTION_HPP_

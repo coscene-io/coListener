@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ROS2_LISTENER_GENERIC_SUBSCRIPTION_HPP_
-#define ROS2_LISTENER_GENERIC_SUBSCRIPTION_HPP_
+#ifndef GENERIC_SUBSCRIPTION_HPP_
+#define GENERIC_SUBSCRIPTION_HPP_
 
 
 #include <memory>
@@ -44,9 +44,9 @@ public:
         void* loaned_message, const rclcpp::MessageInfo& message_info) override;
 
 #ifdef ROS2_VERSION_HUMBLE
-	void handle_serialized_message(
-		const std::shared_ptr<rclcpp::SerializedMessage> & serialized_message,
-    	const rclcpp::MessageInfo & message_info) override;
+    void handle_serialized_message(
+        const std::shared_ptr<rclcpp::SerializedMessage> & serialized_message,
+        const rclcpp::MessageInfo & message_info) override;
 #endif
 
     void return_message(std::shared_ptr<void>& message) override;
@@ -65,5 +65,5 @@ private:
     std::string _message_type;
     std::string _topic_name;
 };
-}
-#endif  // ROS2_LISTENER_GENERIC_SUBSCRIPTION_HPP_
+}  // namespace ros2_listener
+#endif  // GENERIC_SUBSCRIPTION_HPP_

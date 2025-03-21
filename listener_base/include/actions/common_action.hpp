@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COLISTENER_ACTIONS_COMMON_ACTION_H
-#define COLISTENER_ACTIONS_COMMON_ACTION_H
+#ifndef ACTIONS__COMMON_ACTION_HPP_
+#define ACTIONS__COMMON_ACTION_HPP_
 
 #include "actions/action.hpp"
 #include <curl/curl.h>
+#include <string>
+#include <vector>
 
 namespace colistener {
 
@@ -33,6 +35,6 @@ private:
     FILE* dev_null_;
 };
 
-} // namespace colistener
+}  // namespace colistener
 
-#endif // COLISTENER_ACTIONS_COMMON_ACTION_H
+#endif  // ACTIONS__COMMON_ACTION_HPP_

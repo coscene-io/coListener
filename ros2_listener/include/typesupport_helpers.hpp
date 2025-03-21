@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ROS2_LISTENER_TYPESUPPORT_HELPERS_HPP_
-#define ROS2_LISTENER_TYPESUPPORT_HELPERS_HPP_
+#ifndef TYPESUPPORT_HELPERS_HPP_
+#define TYPESUPPORT_HELPERS_HPP_
 
 #include <memory>
 #include <string>
@@ -39,5 +39,5 @@ namespace ros2_listener {
     RCLCPP_PUBLIC
     std::tuple<std::string, std::string, std::string>
     extract_type_identifier(const std::string& full_type);
-} // namespace cobridge
-#endif  // ROS2_LISTENER_TYPESUPPORT_HELPERS_HPP_
+}  // namespace ros2_listener
+#endif  // TYPESUPPORT_HELPERS_HPP_

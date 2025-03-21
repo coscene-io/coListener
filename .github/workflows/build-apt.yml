@@ -5,7 +5,7 @@ on:
   push:
 
 jobs:
-  build-deb:
+  build-deb-package:
     strategy:
       fail-fast: false
       matrix:
@@ -52,16 +52,15 @@ jobs:
     container: 
       image: coscene/ros:${{ matrix.ros_distribution }}-${{ matrix.platform }}
     outputs:
-      download_urls: ${{ steps.set_urls.outputs.urls }}
-      matrix_result_noetic_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_noetic_amd64 }}
-      matrix_result_noetic_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_noetic_arm64 }}
-      matrix_result_melodic_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_melodic_amd64 }}
-      matrix_result_melodic_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_melodic_arm64 }}
-      matrix_result_foxy_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_foxy_amd64 }}
-      matrix_result_foxy_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_foxy_arm64 }}
-      matrix_result_humble_amd64: ${{ steps.set_matrix_output.outputs.matrix_result_humble_amd64 }}
-      matrix_result_humble_arm64: ${{ steps.set_matrix_output.outputs.matrix_result_humble_arm64 }}
-      matrix_result_indigo_armhf: ${{ steps.set_matrix_output.outputs.matrix_result_indigo_armhf }}
+      matrix_result_noetic_amd64: ${{ steps.build_deb.outputs.matrix_result_noetic_amd64 }}
+      matrix_result_noetic_arm64: ${{ steps.build_deb.outputs.matrix_result_noetic_arm64 }}
+      matrix_result_melodic_amd64: ${{ steps.build_deb.outputs.matrix_result_melodic_amd64 }}
+      matrix_result_melodic_arm64: ${{ steps.build_deb.outputs.matrix_result_melodic_arm64 }}
+      matrix_result_foxy_amd64: ${{ steps.build_deb.outputs.matrix_result_foxy_amd64 }}
+      matrix_result_foxy_arm64: ${{ steps.build_deb.outputs.matrix_result_foxy_arm64 }}
+      matrix_result_humble_amd64: ${{ steps.build_deb.outputs.matrix_result_humble_amd64 }}
+      matrix_result_humble_arm64: ${{ steps.build_deb.outputs.matrix_result_humble_arm64 }}
+      matrix_result_indigo_armhf: ${{ steps.build_deb.outputs.matrix_result_indigo_armhf }}
 
     steps:
       - name: Checkout code
@@ -91,6 +90,7 @@ jobs:
           grep "<version>" package.xml
 
       - name: Generate debian/ directory and build .deb package
+        id: build_deb
         run: |
           rosdep update --include-eol-distros --rosdistro=${{ matrix.ros_distribution }}
           bloom-generate rosdebian --ros-distro ${{ matrix.ros_distribution }}
@@ -102,48 +102,26 @@ jobs:
           DEB_FILENAME=$(basename $(ls $GITHUB_WORKSPACE/artifacts/*.deb))
           echo "DEB_FILENAME=$DEB_FILENAME" >> $GITHUB_ENV
           
-          ls -lah $GITHUB_WORKSPACE/artifacts/
+          download_url="https://download.coscene.cn/coscene-apt-source/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-colistener_latest_${{ matrix.platform }}.deb"
+          echo "download url: $download_url"
+          echo $GITHUB_REPOSITORY
+          
+          matrix_key="${{ matrix.ros_distribution }}_${{ matrix.platform }}"
+          echo "matrix_result_${matrix_key}=${{ matrix.platform }},${{ matrix.ros_distribution }},${{ matrix.distro }},$download_url" >> $GITHUB_OUTPUT
+          echo "set output: matrix_result_${matrix_key}=$download_url"
 
       - name: Update APT Source
         uses: coscene-io/update-apt-source@test
         with:
-          ubuntu-distro: ${{ matrix.distro }}
-          deb-paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
+          ubuntu_distro: ${{ matrix.distro }}
+          deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
           architectures: ${{ matrix.platform }}
-          access-key-id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
-          access-key-secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-
-      - name: Install and Configure ossutil
-        shell: bash
-        run: |
-          curl https://gosspublic.alicdn.com/ossutil/install.sh | bash
-          ossutil config -e oss-cn-hangzhou.aliyuncs.com -i ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }} -k ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
-          
-      - name: Upload latest files to oss
-        id: set_urls
-        run: |
-          urls=""
-          for file in $GITHUB_WORKSPACE/artifacts/*.deb; do
-            filename=$(basename "$file")
-            echo "Uploading file: $file as $filename"
-            ossutil cp -f "$file" "oss://coscene-download/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename"
-            ossutil cp -f "$file" "oss://coscene-download/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-colistener_latest-0${{ matrix.distro }}_${{ matrix.platform }}.deb"
-            download_url="https://coscene-download.oss-cn-hangzhou.aliyuncs.com/colistener/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/$filename"
-            urls="${urls}${{ matrix.platform }},${{ matrix.ros_distribution }},${{ matrix.distro }},$download_url;"
-          done
-          echo "urls=$urls" >> $GITHUB_OUTPUT
-          echo "urls: $urls"
-          
-      - name: Set matrix output
-        id: set_matrix_output
-        run: |
-          matrix_key="${{ matrix.ros_distribution }}_${{ matrix.platform }}"
-          echo "matrix_result_${matrix_key}=${{ steps.set_urls.outputs.urls }}" >> $GITHUB_OUTPUT
-          echo "set output: matrix_result_${matrix_key}=${{ steps.set_urls.outputs.urls }}"
+          access_key_id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
+          access_key_secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
   Download-list:
-    needs: build-deb
+    needs: build-deb-package
     runs-on: ubuntu-latest
     steps:
       - name: Create workflow summary
@@ -153,15 +131,15 @@ jobs:
           echo "| --- | --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
           
           URLS=""
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_noetic_amd64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_noetic_arm64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_melodic_amd64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_melodic_arm64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_foxy_amd64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_foxy_arm64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_humble_amd64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_humble_arm64 }};"
-          URLS="${URLS}${{ needs.build-deb.outputs.matrix_result_indigo_armhf }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_noetic_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_noetic_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_melodic_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_melodic_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_foxy_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_foxy_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_humble_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_humble_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_indigo_armhf }};"
           
           IFS=';' read -ra URL_ARRAY <<< "$URLS"
           for url_item in "${URL_ARRAY[@]}"; do
