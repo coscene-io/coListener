@@ -2,7 +2,6 @@ name: build-apt.yml
 on:
   workflow_dispatch:
   release:
-  push:
 
 jobs:
   build-deb-package:
