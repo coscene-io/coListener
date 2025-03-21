@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COLISTENER_H
-#define COLISTENER_H
+#ifndef COLISTENER_HPP_
+#define COLISTENER_HPP_
 #include <string>
 #include <vector>
 #include <sstream>
-#include <utils/json.hpp>
+#include <nlohmann/json.hpp>
 #include <sys/stat.h>
 
 namespace colistener {
@@ -77,7 +77,7 @@ struct MessageCache {
         this->msg = msg;
         this->msgType = msgType;
         this->ts = ts;
-    };
+    }
 
     MessageCache(const std::string& topic, const std::string& msg, const std::string& msgType, const double& ts) {
         this->id = -1;
@@ -85,7 +85,7 @@ struct MessageCache {
         this->msg = msg;
         this->msgType = msgType;
         this->ts = ts;
-    };
+    }
 
     size_t get_size() const {
         return 16 + topic.size() + msg.size() + msgType.size();
@@ -136,7 +136,7 @@ static std::string vector_to_string(const std::vector<T>& vec) {
     return oss.str();
 }
 
-}
+}  // namespace colistener
 
 
-#endif //COLISTENER_H
+#endif  //COLISTENER_HPP_

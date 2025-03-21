@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef COLISTENER_PERSISTENCE_DATABASE_MANAGER_H
-#define COLISTENER_PERSISTENCE_DATABASE_MANAGER_H
+#ifndef PERSISTENCE__DATABASE_MANAGER_HPP_
+#define PERSISTENCE__DATABASE_MANAGER_HPP_
 
 
 #include <string>
@@ -23,7 +23,6 @@
 #include <sqlite3.h>
 #include "colistener.hpp"
 #include <chrono>
-#include <utils/logger.hpp>
 
 namespace colistener {
 class DatabaseManager {
@@ -62,6 +61,6 @@ private:
 };
 
 
-} // namespace colistener
+}  // namespace colistener
 
-#endif //COLISTENER_PERSISTENCE_DATABASE_MANAGER_H
+#endif  // PERSISTENCE__DATABASE_MANAGER_HPP_

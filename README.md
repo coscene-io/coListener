@@ -1,19 +1,18 @@
 # coListener
 
-## 项目介绍
+## Project Introduction
 
-coListener 是一个通用的 ROS 话题监听器，可以订阅指定的 ROS 话题并进行数据处理。它同时支持 ROS1 和 ROS2，能够自动适应不同的
-ROS 环境。
+coListener is a universal ROS topic listener that can subscribe to specified ROS topics and process data. It supports both ROS1 and ROS2, automatically adapting to different ROS environments.
 
-## 特点
+## Features
 
-* 双 ROS 版本支持：兼容 ROS1 和 ROS2 环境
-* 多平台支持：支持 amd64, arm64, armhf 等多种硬件平台
-* 多 ROS 发行版：支持 ROS1 的 indigo，ROS2 的 foxy 和 humble
-* 持久化存储：使用 SQLite 数据库存储消息数据
-* 自定义动作：支持针对接收到的消息执行自定义动作
-* 批量处理：定时批量发送和处理收集到的消息
-* 支持的平台
+* Dual ROS version support: Compatible with both ROS1 and ROS2 environments
+* Multi-platform support: Supports amd64, arm64, armhf and other hardware platforms
+* Multiple ROS distributions: Supports ROS1's indigo, ROS2's foxy and humble
+* Persistent storage: Uses SQLite database to store message data
+* Custom actions: Supports executing custom actions for received messages
+* Batch processing: Periodically sends and processes collected messages in batches
+* Supported platforms
 
 | ROS distro | platform     | Ubuntu distro |
 |------------|--------------|---------------|
@@ -21,33 +20,34 @@ ROS 环境。
 | foxy       | amd64, arm64 | focal         |
 | humble     | amd64, arm64 | jammy         |
 | indigo     | armhf        | trusty        |
+| melodic    | amd64, arm64 | bionic        |
 
-## 安装
+## Installation
 
-使用 apt 安装
+Install using apt
 
   ```bash
-    curl -fsSL https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/coscene.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/coscene.gpg
-    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/coscene.list
+    curl -fsSL https://download.coscene.cn/coscene-apt-source/coscene.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/coscene.gpg
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://download.coscene.cn/coscene-apt-source $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/coscene.list
     sudo apt update
     sudo apt install ros-$ROS_DISTRO-colistener
   ```
 
-## 下载deb安装
+## Download deb for installation
 
 | Platform | ROS Distro | Ubuntu Distro | URL                                                                                                                                             |
 |----------|------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| amd64    | noetic     | 	focal        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-amd64/ros-noetic-colistener_latest_amd64.deb   |
-| arm64    | noetic     | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-arm64/ros-noetic-colistener_latest_arm64.deb   |
-| amd64    | melodic    | bionic        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/bionic/main/binary-amd64/ros-melodic-colistener_latest_amd64.deb |
-| arm64    | melodic    | bionic        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/bionic/main/binary-arm64/ros-melodic-colistener_latest_arm64.deb |
-| amd64    | foxy       | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-amd64/ros-foxy-colistener_latest_amd64.deb     |
-| arm64    | foxy       | focal         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/focal/main/binary-arm64/ros-foxy-colistener_latest_arm64.deb     |
-| amd64    | humble     | jammy         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/jammy/main/binary-amd64/ros-humble-colistener_latest_amd64.deb   |
-| arm64    | humble     | jammy         | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/jammy/main/binary-arm64/ros-humble-colistener_latest_arm64.deb   |
-| armhf    | indigo     | trusty        | https://coscene-download.oss-cn-hangzhou.aliyuncs.com/coscene-apt-source/dists/trusty/main/binary-armhf/ros-indigo-colistener_latest_armhf.deb  |
+| amd64    | noetic     | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-amd64/ros-noetic-colistener_latest_amd64.deb   |
+| arm64    | noetic     | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-arm64/ros-noetic-colistener_latest_arm64.deb   |
+| amd64    | melodic    | bionic        | https://download.coscene.cn/coscene-apt-source/dists/bionic/main/binary-amd64/ros-melodic-colistener_latest_amd64.deb |
+| arm64    | melodic    | bionic        | https://download.coscene.cn/coscene-apt-source/dists/bionic/main/binary-arm64/ros-melodic-colistener_latest_arm64.deb |
+| amd64    | foxy       | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-amd64/ros-foxy-colistener_latest_amd64.deb     |
+| arm64    | foxy       | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-arm64/ros-foxy-colistener_latest_arm64.deb     |
+| amd64    | humble     | jammy         | https://download.coscene.cn/coscene-apt-source/dists/jammy/main/binary-amd64/ros-humble-colistener_latest_amd64.deb   |
+| arm64    | humble     | jammy         | https://download.coscene.cn/coscene-apt-source/dists/jammy/main/binary-arm64/ros-humble-colistener_latest_arm64.deb   |
+| armhf    | indigo     | trusty        | https://download.coscene.cn/coscene-apt-source/dists/trusty/main/binary-armhf/ros-indigo-colistener_latest_armhf.deb  |
 
-## 从源码构建 (推荐)
+## Build from source (Recommended)
 
   ```
     # ROS1
@@ -65,54 +65,53 @@ ROS 环境。
     source install/setup.bash
   ```
 
-## 使用方法
+## Usage
 
 * ROS1
   ```
-  # 使用前需要先source ROS 环境变量（e.g.: source /opt/ros/noetic/setup.bash）
+  # Source ROS environment variables first (e.g.: source /opt/ros/noetic/setup.bash)
   roslaunch colistener colistener.launch
   ```
 
 * ROS2
   ```
-  # 使用前需要先source ROS 环境变量（e.g.: source /opt/ros/humble/setup.bash）
+  # Source ROS environment variables first (e.g.: source /opt/ros/humble/setup.bash)
   ros2 launch colistener colistener.launch.xml
   ```
   
-* 规则引擎相关内容见： [添加规则](https://docs.coscene.cn/docs/use-case/data-diagnosis/add-rule)
+* For rule engine related content, see: [Add Rule](https://docs.coscene.cn/docs/use-case/data-diagnosis/add-rule)
 
-### 配置参数
+### Configuration Parameters
 
-**ROS1 配置文件路径： /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch**
+**ROS1 configuration file path: /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch**
 
-**ROS2 配置文件路径： /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch.xml**
+**ROS2 configuration file path: /opt/ros/$ROS_DISTRO/share/colistener/launch/colistener.launch.xml**
 
-| 参数名                     | 数据类型  | 默认值                                                                           | 描述          |
-|-------------------------|-------|-------------------------------------------------------------------------------|-------------|
-| subscribe_topics        | 字符串数组 | ['/error_report', '/event_tracking_report']                                   | 要订阅的话题列表    |
-| persistence_expire_secs | 整数    | 1800                                                                          | 消息数据过期时间(秒) |
-| persistence_file_path   | 字符串   | "/tmp/colistener/persistence/ros1.db" 或 "/tmp/colistener/persistence/ros2.db" | 持久化数据库文件路径  |
-| action_type             | 字符串   | "common"                                                                      | 动作类型        |
-| log_directory           | 字符串   | "/tmp/colistener/logs/"                                                       | 日志存储目录      |
+| Parameter Name           | Data Type     | Default Value                                                                  | Description                        |
+|--------------------------|---------------|--------------------------------------------------------------------------------|------------------------------------|
+| subscribe_topics         | String Array  | ['/error_report', '/event_tracking_report']                                   | List of topics to subscribe to     |
+| persistence_expire_secs  | Integer       | 1800                                                                          | Message data expiration time (sec) |
+| persistence_file_path    | String        | "/tmp/colistener/persistence/ros1.db" or "/tmp/colistener/persistence/ros2.db" | Persistence database file path     |
+| action_type              | String        | "common"                                                                      | Action type                        |
+| log_directory            | String        | "/tmp/colistener/logs/"                                                       | Log storage directory              |
 
-**❗修改配置文件后，需要重启coListener**
+**❗After modifying the configuration file, you need to restart coListener**
 
-## 构建发布包
+## Building Release Packages
 
-此项目使用 GitHub Actions 自动构建和发布 Debian 包。当推送新的标签或创建新的发布时，工作流会自动更新版本号并构建对应的
-Debian 包。
+This project uses GitHub Actions to automatically build and publish Debian packages. When a new tag is pushed or a new release is created, the workflow automatically updates the version number and builds the corresponding Debian package.
 
-## 开发指南
+## Development Guide
 
-* 添加新的动作类型
-    1. 在 listener_base/include/actions/ 目录下创建新的动作类头文件
-    2. 在 listener_base/src/actions/ 目录下实现该动作类
-    3. 在主程序中添加动作类型的注册和识别
+* Adding a new action type
+    1. Create a new action class header file in the listener_base/include/actions/ directory
+    2. Implement the action class in the listener_base/src/actions/ directory
+    3. Add registration and identification of the action type in the main program
 
-## 许可证
+## License
 
-本项目基于 Apache License 2.0 授权。详情请参阅 LICENSE 文件。
+This project is licensed under the Apache License 2.0. See the LICENSE file for details.
 
-## 联系方式
+## Contact
 
-维护者: coscene@coscene.io
+Maintainer: coscene@coscene.io

@@ -14,9 +14,12 @@
 
 
 #include "persistence/database_manager.hpp"
+#include "utils/logger.hpp"
 #include <mutex>
 #include <ctime>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace colistener {
 bool DatabaseManager::init(const std::string& db_path, int64_t expire_secs) {
@@ -191,8 +194,7 @@ bool DatabaseManager::remove_messages(const std::vector<MessageCache>& messages)
         
         COLOG_INFO("Successfully deleted %zu messages in batch", messages.size());
         return true;
-    }
-    else {
+    } else {
         const auto delete_sql = "DELETE FROM messages WHERE id = ?;";
         sqlite3_stmt* stmt;
         int rc = sqlite3_prepare_v2(db_, delete_sql, -1, &stmt, nullptr);
@@ -203,7 +205,7 @@ bool DatabaseManager::remove_messages(const std::vector<MessageCache>& messages)
         }
         
         bool success = true;
-        int processed = 0;
+        int64_t processed = 0;
         
         for (const auto& message : messages) {
             sqlite3_reset(stmt);
@@ -211,8 +213,7 @@ bool DatabaseManager::remove_messages(const std::vector<MessageCache>& messages)
             
             rc = sqlite3_step(stmt);
             if (rc != SQLITE_DONE) {
-                COLOG_ERROR("Failed to delete message ID %lld: %s", 
-                          (long long)message.id, sqlite3_errmsg(db_));
+                COLOG_ERROR("Failed to delete message ID %lld: %s", message.id, sqlite3_errmsg(db_));
                 success = false;
                 break;
             }
@@ -236,9 +237,16 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
     std::vector<MessageCache> messages;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        flush_cache();
+        
         const auto expired_time = std::time(nullptr) - expire_time_;
-
+        for (const auto& msg : message_cache_) {
+            if (msg.ts > expired_time) {
+                messages.push_back(msg);
+            } else {
+                expired_messages_.push_back(msg);
+            }
+        }
+        
         const auto select_sql = "SELECT id, topic, message, datatype, timestamp FROM messages;";
         sqlite3_stmt* stmt;
         int rc = sqlite3_prepare_v2(db_, select_sql, -1, &stmt, nullptr);

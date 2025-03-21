@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COLISTENER_ACTIONS_SAMPLE_ACTION_H
-#define COLISTENER_ACTIONS_SAMPLE_ACTION_H
+#ifndef ACTIONS__EXAMPLE_ACTION_HPP_
+#define ACTIONS__EXAMPLE_ACTION_HPP_
 
 #include "actions/action.hpp"
+#include <vector>
 
 namespace colistener {
 class ExampleAction final : public Action {
@@ -28,4 +29,4 @@ public:
 }
 
 
-#endif // COLISTENER_ACTIONS_SAMPLE_ACTION_H
+#endif  // ACTIONS__EXAMPLE_ACTION_HPP_

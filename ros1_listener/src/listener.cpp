@@ -1,8 +1,26 @@
+// Copyright 2025 coScene
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <sstream>
 #include <cstring>
+#include <map>
 #include <stdexcept>
 #include <fstream>
+#include <set>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "listener.hpp"
 
@@ -179,7 +197,6 @@ std::vector<colistener::MessageField> Listener::parse_message_definition(const s
 
         current_section += line + "\n";
     }
-    
     if (!first_section && !current_msg_type.empty()) {
         message_sections[current_msg_type] = current_section;
     } else if (first_section) {
@@ -205,7 +222,6 @@ std::vector<colistener::MessageField> Listener::parse_section(const std::string&
         if (line.empty()) {
             continue;
         }
-        
         if (line.find('=') != std::string::npos) {
             continue;
         }
@@ -412,4 +428,4 @@ void Listener::deserialize_builtin_type(const uint8_t* buffer, size_t& offset,
             throw std::invalid_argument("Unknown type");
     }
 }
-}
+}  // namespace ros1_listener

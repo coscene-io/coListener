@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COLISTENER_ACTIONS_ACTION_H
-#define COLISTENER_ACTIONS_ACTION_H
+#ifndef ACTIONS__ACTION_HPP_
+#define ACTIONS__ACTION_HPP_
 
-#include <utils/json.hpp>
+#include <nlohmann/json.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 #include "colistener.hpp"
@@ -30,6 +31,6 @@ public:
     static std::shared_ptr<Action> create(const std::string& type);
 };
 
-} // namespace colistener
+}  // namespace colistener
 
-#endif // COLISTENER_ACTIONS_ACTION_H
+#endif  // ACTIONS__ACTION_HPP_

@@ -12,22 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ROS2_LISTENER_LISTENER_HPP
-#define ROS2_LISTENER_LISTENER_HPP
-
-#include <map>
+#ifndef LISTENER_HPP_
+#define LISTENER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
-#include <utils/json.hpp>
+#include <nlohmann/json.hpp>
 #include <rosidl_typesupport_introspection_cpp/message_introspection.hpp>
 
 #include "actions/action.hpp"
 #include "persistence/database_manager.hpp"
-#include "utils/logger.hpp"
 #include "colistener.hpp"
+#include <memory>
 #include <mutex>
-#include <thread>
-#include <curl/curl.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #ifdef ROS2_VERSION_FOXY
 #include "generic_subscription.hpp"
@@ -105,6 +104,6 @@ private:
 
     const std::vector<colistener::MessageField>& get_or_build_fields(const std::string& datatype);
 };
-} // namespace ros2_listener
+}  // namespace ros2_listener
 
-#endif // ROS2_LISTENER_LISTENER_HPP
+#endif  // LISTENER_HPP_

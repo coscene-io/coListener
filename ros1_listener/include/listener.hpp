@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ROS1_LISTENER_LISTENER_H
-#define ROS1_LISTENER_LISTENER_H
+#ifndef LISTENER_HPP_
+#define LISTENER_HPP_
 
 #include <vector>
 #include <string>
@@ -21,6 +21,7 @@
 #include <set>
 #include <mutex>
 #include <thread>
+#include <memory>
 
 #include <curl/curl.h>
 #include <utils/json.hpp>
@@ -88,6 +89,6 @@ private:
         return oss.str();
     }
 };
-} // namespace ros1_listener
+}  // namespace ros1_listener
 
-#endif // ROS1_LISTENER_LISTENER_H
+#endif  // LISTENER_HPP_

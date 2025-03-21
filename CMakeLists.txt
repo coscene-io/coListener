@@ -196,6 +196,33 @@ elseif(ROS_BUILD_TYPE STREQUAL "ament_cmake")
     endif()
 endif()
 
+if(ROS_BUILD_TYPE STREQUAL "catkin")
+    if(CATKIN_ENABLE_TESTING)
+        message(STATUS "Building tests with catkin")
+
+    endif()
+elseif(ROS_BUILD_TYPE STREQUAL "ament_cmake")
+    if(BUILD_TESTING)
+        message(STATUS "Building tests with ament_cmake")
+
+        find_package(ament_cmake_gtest REQUIRED)
+        find_package(std_msgs REQUIRED)
+
+        ament_add_gtest(test_generic_subscription
+          ros2_listener/test/test_generic_subscription.cpp
+        )
+        target_include_directories(test_generic_subscription PUBLIC
+          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:include>
+        )
+        target_link_libraries(test_generic_subscription ros2_listener)
+        ament_target_dependencies(test_generic_subscription
+          rclcpp
+          std_msgs
+        )
+    endif()
+endif()
+
 
 if(ROS_BUILD_TYPE STREQUAL "catkin")
     message(STATUS "catkin install")
