@@ -15,7 +15,7 @@
 #ifndef ACTIONS__ACTION_HPP_
 #define ACTIONS__ACTION_HPP_
 
-#include <nlohmann/json.hpp>
+#include <utils/json.hpp>
 #include <memory>
 #include <string>
 #include <vector>
