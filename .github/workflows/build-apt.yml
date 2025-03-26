@@ -119,8 +119,8 @@ jobs:
           endpoint: https://s3.us-east-1.amazonaws.com
           region: us-east-1
           bucket_name: coscene-apt
-          access_key_id: ${{ secrets.OSS_ARTIFACTS_ACCESS_KEY }}
-          access_key_secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
+          access_key_id: ${{ secrets.S3_ARTIFACTS_ACCESS_KEY }}
+          access_key_secret: ${{ secrets.S3_ARTIFACTS_ACCESS_SECRET }}
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Update APT Source (OSS)
