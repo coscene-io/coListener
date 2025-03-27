@@ -110,6 +110,7 @@ jobs:
           echo "set output: matrix_result_${matrix_key}=$download_url"
 
 #      - name: Update APT Source (AWS)
+#        id: aws-apt-update
 #        uses: coscene-io/update-apt-source@test
 #        with:
 #          ubuntu_distro: ${{ matrix.distro }}
@@ -124,6 +125,7 @@ jobs:
 #          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Update APT Source (OSS)
+        id: oss-apt-update
         uses: coscene-io/update-apt-source@dev
         with:
           ubuntu_distro: ${{ matrix.distro }}
@@ -140,6 +142,9 @@ jobs:
       - name: Get output values
         run: |
           echo $GITHUB_OUTPUT
+          
+          matrix_key="${{ matrix.distro }}_${{ matrix.platform }}"
+          echo "Repository URL for focal: ${{ steps.oss-apt-update.outputs.$matrix_key }}"
 
   Download-list:
     needs: build-deb-package
