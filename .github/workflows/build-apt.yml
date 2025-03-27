@@ -137,6 +137,10 @@ jobs:
           access_key_secret: ${{ secrets.OSS_ARTIFACTS_ACCESS_SECRET }}
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
+      - name: Get output values
+        run: |
+          echo $GITHUB_OUTPUT
+
   Download-list:
     needs: build-deb-package
     runs-on: ubuntu-latest
