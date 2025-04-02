@@ -28,25 +28,25 @@ ROS 环境。
 使用 apt 安装
 
   ```bash
-    curl -fsSL https://download.coscene.cn/coscene-apt-source/coscene.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/coscene.gpg
-    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://download.coscene.cn/coscene-apt-source $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/coscene.list
+    curl -fsSL https://apt.coscene.cn/coscene.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/coscene.gpg
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/coscene.gpg] https://apt.coscene.cn $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/coscene.list
     sudo apt update
     sudo apt install ros-$ROS_DISTRO-colistener
   ```
 
 ## 下载deb安装
 
-| Platform | ROS Distro | Ubuntu Distro | URL                                                                                                                                             |
-|----------|------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| amd64    | noetic     | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-amd64/ros-noetic-colistener_latest_amd64.deb   |
-| arm64    | noetic     | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-arm64/ros-noetic-colistener_latest_arm64.deb   |
-| amd64    | melodic    | bionic        | https://download.coscene.cn/coscene-apt-source/dists/bionic/main/binary-amd64/ros-melodic-colistener_latest_amd64.deb |
-| arm64    | melodic    | bionic        | https://download.coscene.cn/coscene-apt-source/dists/bionic/main/binary-arm64/ros-melodic-colistener_latest_arm64.deb |
-| amd64    | foxy       | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-amd64/ros-foxy-colistener_latest_amd64.deb     |
-| arm64    | foxy       | focal         | https://download.coscene.cn/coscene-apt-source/dists/focal/main/binary-arm64/ros-foxy-colistener_latest_arm64.deb     |
-| amd64    | humble     | jammy         | https://download.coscene.cn/coscene-apt-source/dists/jammy/main/binary-amd64/ros-humble-colistener_latest_amd64.deb   |
-| arm64    | humble     | jammy         | https://download.coscene.cn/coscene-apt-source/dists/jammy/main/binary-arm64/ros-humble-colistener_latest_arm64.deb   |
-| armhf    | indigo     | trusty        | https://download.coscene.cn/coscene-apt-source/dists/trusty/main/binary-armhf/ros-indigo-colistener_latest_armhf.deb  |
+| Platform | ROS Distro | Ubuntu Distro | URL                                                                                           |
+|----------|------------|---------------|-----------------------------------------------------------------------------------------------|
+| amd64    | noetic     | focal         | https://apt.coscene.cn/dists/focal/main/binary-amd64/ros-noetic-colistener_latest_amd64.deb   |
+| arm64    | noetic     | focal         | https://apt.coscene.cn/dists/focal/main/binary-arm64/ros-noetic-colistener_latest_arm64.deb   |
+| amd64    | melodic    | bionic        | https://apt.coscene.cn/dists/bionic/main/binary-amd64/ros-melodic-colistener_latest_amd64.deb |
+| arm64    | melodic    | bionic        | https://apt.coscene.cn/dists/bionic/main/binary-arm64/ros-melodic-colistener_latest_arm64.deb |
+| amd64    | foxy       | focal         | https://apt.coscene.cn/dists/focal/main/binary-amd64/ros-foxy-colistener_latest_amd64.deb     |
+| arm64    | foxy       | focal         | https://apt.coscene.cn/dists/focal/main/binary-arm64/ros-foxy-colistener_latest_arm64.deb     |
+| amd64    | humble     | jammy         | https://apt.coscene.cn/dists/jammy/main/binary-amd64/ros-humble-colistener_latest_amd64.deb   |
+| arm64    | humble     | jammy         | https://apt.coscene.cn/dists/jammy/main/binary-arm64/ros-humble-colistener_latest_arm64.deb   |
+| armhf    | indigo     | trusty        | https://apt.coscene.cn/dists/trusty/main/binary-armhf/ros-indigo-colistener_latest_armhf.deb  |
 
 ## 从源码构建 (推荐)
 
