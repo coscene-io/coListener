@@ -101,7 +101,7 @@ jobs:
           DEB_FILENAME=$(basename $(ls $GITHUB_WORKSPACE/artifacts/*.deb))
           echo "DEB_FILENAME=$DEB_FILENAME" >> $GITHUB_ENV
           
-          download_url="https://download.coscene.cn/coscene-apt-source/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-colistener_latest_${{ matrix.platform }}.deb"
+          download_url="https://apt.coscene.cn/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/ros-${{ matrix.ros_distribution }}-colistener_latest_${{ matrix.platform }}.deb"
           echo "download url: $download_url"
           echo $GITHUB_REPOSITORY
           
@@ -109,22 +109,24 @@ jobs:
           echo "matrix_result_${matrix_key}=${{ matrix.platform }},${{ matrix.ros_distribution }},${{ matrix.distro }},$download_url" >> $GITHUB_OUTPUT
           echo "set output: matrix_result_${matrix_key}=$download_url"
 
-      - name: Update APT Source (AWS)
-        uses: coscene-io/update-apt-source@test
-        with:
-          ubuntu_distro: ${{ matrix.distro }}
-          deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
-          architectures: ${{ matrix.platform }}
-          storage_type: aws
-          endpoint: https://s3.us-east-1.amazonaws.com
-          region: us-east-1
-          bucket_name: coscene-apt
-          access_key_id: ${{ secrets.S3_ARTIFACTS_ACCESS_KEY }}
-          access_key_secret: ${{ secrets.S3_ARTIFACTS_ACCESS_SECRET }}
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+#      - name: Update APT Source (AWS)
+#        id: aws-apt-update
+#        uses: coscene-io/update-apt-source@test
+#        with:
+#          ubuntu_distro: ${{ matrix.distro }}
+#          deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
+#          architectures: ${{ matrix.platform }}
+#          storage_type: aws
+#          endpoint: https://s3.us-east-1.amazonaws.com
+#          region: us-east-1
+#          bucket_name: coscene-apt
+#          access_key_id: ${{ secrets.S3_ARTIFACTS_ACCESS_KEY }}
+#          access_key_secret: ${{ secrets.S3_ARTIFACTS_ACCESS_SECRET }}
+#          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Update APT Source (OSS)
-        uses: coscene-io/update-apt-source@test
+        id: oss-apt-update
+        uses: coscene-io/update-apt-source@main
         with:
           ubuntu_distro: ${{ matrix.distro }}
           deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
