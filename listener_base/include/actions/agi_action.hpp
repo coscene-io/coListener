@@ -12,24 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <memory>
-#include <string>
-#include "actions/action.hpp"
+#ifndef ACTIONS__AGI_ACTION_HPP_
+#define ACTIONS__AGI_ACTION_HPP_
 
-#include "actions/agi_action.hpp"
-#include "actions/common_action.hpp"
-#include "actions/example_action.hpp"
+#include "actions/action.hpp"
+#include <curl/curl.h>
 
 namespace colistener {
-std::shared_ptr<Action> Action::create(const std::string& type) {
-    if (type == "common" || type.empty()) {
-        return std::make_shared<CommonAction>();
-    } else if (type == "example") {
-        return std::make_shared<ExampleAction>();
-    } else if (type == "agi") {
-        return std::make_shared<AgiAction>();
-    }
 
-    throw std::runtime_error("Unknown action type: " + type);
-}
-} // namespace colistener
+class AgiAction final : public Action {
+public:
+  AgiAction();
+  ~AgiAction() override;
+  bool execute(const std::vector<MessageCache>& messages) override;
+
+private:
+  CURL* curl_;
+  std::string endpoint_;
+  struct curl_slist* headers_;
+  FILE* dev_null_;
+
+};
+
+}  // namespace colistener
+#endif //  ACTIONS__AGI_ACTION_HPP_
