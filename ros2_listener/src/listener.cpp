@@ -42,7 +42,7 @@ Listener::Listener() : Node("colistener"),
                colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_directory.c_str());
 
-    this->declare_parameter("action_type", "example");
+    this->declare_parameter("action_type", "agi");
     const std::string action_type = this->get_parameter("action_type").as_string();
     action_ = colistener::Action::create(action_type);
     COLOG_INFO("action_type: %s", action_type.c_str());
@@ -55,7 +55,7 @@ Listener::Listener() : Node("colistener"),
     COLOG_INFO("persistence_file: %s, expire_secs: %d", persistence_file.c_str(),
                persistence_secs);
 
-    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/error_code", "/error_event"});
+    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/custom_msg_test"});
     const std::vector<std::string> topics = this->get_parameter("subscribe_topics").as_string_array();
     pending_topics_ = topics;
     COLOG_INFO("Subscribing to topics: %s",

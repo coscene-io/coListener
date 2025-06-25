@@ -238,16 +238,8 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         
-        const auto expired_time = std::time(nullptr) - expire_time_;
-        for (const auto& msg : message_cache_) {
-            if (msg.ts > expired_time) {
-                messages.push_back(msg);
-            } else {
-                expired_messages_.push_back(msg);
-            }
-        }
-        
-        const auto select_sql = "SELECT id, topic, message, datatype, timestamp FROM messages;";
+        const auto expired_time = std::time(nullptr) - expire_time_;        
+        const auto select_sql = "SELECT id, topic, message, datatype, timestamp FROM messages ORDER BY timestamp ASC;";
         sqlite3_stmt* stmt;
         int rc = sqlite3_prepare_v2(db_, select_sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
@@ -269,13 +261,21 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
         }
 
         sqlite3_finalize(stmt);
+
+        for (const auto& msg : message_cache_) {
+            if (msg.ts > expired_time) {
+                messages.push_back(msg);
+            } else {
+                expired_messages_.push_back(msg);
+            }
+        }
+        message_cache_.clear();
     }
 
     if (!expired_messages_.empty()) {
         remove_messages(expired_messages_);
         expired_messages_.clear();
-    }
-
+    }    
     return messages;
 }
 
