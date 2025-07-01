@@ -150,7 +150,7 @@ void Listener::check_active_topics()
                                 this->callback(msg, added_topic, datatype);
                             },
                             subscription_options);
-                        subscribers_.emplace(subscriber);
+                        subscriptions_.emplace(added_topic, subscriber);
                         subscribe_topics_.emplace(added_topic);
 #endif
 
