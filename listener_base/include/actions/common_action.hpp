@@ -16,7 +16,7 @@
 #define ACTIONS__COMMON_ACTION_HPP_
 
 #include "actions/action.hpp"
-#include <curl/curl.h>
+#include "utils/curl_client.hpp"
 #include <string>
 #include <vector>
 
@@ -29,10 +29,9 @@ public:
     bool execute(const std::vector<MessageCache>& messages) override;
 
 private:
-    CURL* curl_;
+    CurlClient curl_client_;
+    std::map<std::string, std::string> headers_;
     std::string endpoint_;
-    struct curl_slist* headers_;
-    FILE* dev_null_;
 };
 
 }  // namespace colistener

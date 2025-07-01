@@ -101,6 +101,10 @@ Install using apt
 
 This project uses GitHub Actions to automatically build and publish Debian packages. When a new tag is pushed or a new release is created, the workflow automatically updates the version number and builds the corresponding Debian package.
 
+## Caution
+
+coListener will record all the messages it subscribes to and parses in its log file, in order to locate and troubleshoot the problem, so please don't use colistener to subscribe to topics with large amount of data (e.g. sensor_msgs/Image, etc.) to prevent colistener from taking up a lot of disk IO and storage space.
+
 ## Development Guide
 
 * Adding a new action type

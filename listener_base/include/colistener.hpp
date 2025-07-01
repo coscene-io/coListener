@@ -26,7 +26,8 @@ extern const char GIT_HASH[];
 
 constexpr char DEFAULT_URL[] = "http://localhost";
 constexpr char DEFAULT_PORT[] = "22524";
-constexpr char DEFAULT_ROUTE[] = "/ruleEngine/messages";
+constexpr char SEND_MESSAGES[] = "/ruleEngine/messages";
+constexpr char ACTIVE_TOPICS[] = "/ruleEngine/activeTopics";
 
 enum class RosDataType
 {

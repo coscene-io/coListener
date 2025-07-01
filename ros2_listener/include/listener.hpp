@@ -22,11 +22,13 @@
 #include "actions/action.hpp"
 #include "persistence/database_manager.hpp"
 #include "colistener.hpp"
+#include "utils/curl_client.hpp"
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <curl/curl.h>
 
 #ifdef ROS2_VERSION_FOXY
 #include "generic_subscription.hpp"
@@ -40,12 +42,12 @@ constexpr int64_t DEFAULT_MAX_QOS_DEPTH = 25;
 class Listener final : public rclcpp::Node {
 public:
     Listener();
-    ~Listener() override = default;
+    ~Listener() override;
 
 private:
     const bool system_is_little_endian_;
-    std::vector<rclcpp::SubscriptionBase::SharedPtr> subscribers_;
-    std::vector<std::string> pending_topics_;
+    std::map<std::string, rclcpp::SubscriptionBase::SharedPtr> subscriptions_;
+    std::set<std::string> subscribe_topics_;
 
     rclcpp::TimerBase::SharedPtr retry_timer_;
     rclcpp::TimerBase::SharedPtr send_timer_;
@@ -56,7 +58,11 @@ private:
     mutable std::mutex message_definitions_mutex_;
     std::unordered_map<std::string, std::vector<colistener::MessageField>> message_definitions_;
 
-    void check_and_subscribe_topics();
+    colistener::CurlClient curl_client_;
+    std::string endpoint_;
+    std::map<std::string, std::string> headers_;
+
+    void check_active_topics();
 
     void batch_send_msgs_callback();
 
@@ -88,6 +94,8 @@ private:
 
     rclcpp::QoS get_qos_from_topic(const std::string& topic) const;
 
+    const std::vector<colistener::MessageField>& get_or_build_fields(const std::string& datatype);
+
     template<typename T>
     static T swap_endian(T value) {
         union {
@@ -101,8 +109,6 @@ private:
         }
         return dest.value;
     }
-
-    const std::vector<colistener::MessageField>& get_or_build_fields(const std::string& datatype);
 };
 }  // namespace ros2_listener
 

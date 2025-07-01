@@ -103,6 +103,10 @@ ROS 环境。
 此项目使用 GitHub Actions 自动构建和发布 Debian 包。当推送新的标签或创建新的发布时，工作流会自动更新版本号并构建对应的
 Debian 包。
 
+## 注意事项
+
+coListener 会将其订阅并解析的所有 message 记录在其 log 文件中,以便进行问题定位及排查,所以,请勿使用 colistener 订阅大数据量的 topic (例如 sensor_msgs/Image 等),以防 colistener 占用大量磁盘 IO 和存储空间
+
 ## 开发指南
 
 * 添加新的动作类型

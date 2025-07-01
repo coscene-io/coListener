@@ -33,7 +33,7 @@ AgiAction::AgiAction() : curl_(nullptr), headers_(nullptr), dev_null_(nullptr) {
     endpoint_ = std::string(DEFAULT_URL) +
         ":" +
         std::string(DEFAULT_PORT) +
-        std::string(DEFAULT_ROUTE);
+        std::string(SEND_MESSAGES);
 
     curl_easy_setopt(curl_, CURLOPT_WRITEDATA, dev_null_);
 }

@@ -67,6 +67,7 @@ add_library(colistener_base SHARED
         listener_base/src/actions/agi_action.cpp
         listener_base/src/persistence/database_manager.cpp
         listener_base/src/utils/logger.cpp
+        listener_base/src/utils/curl_client.cpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/colistener_base/src/version.cpp
 )

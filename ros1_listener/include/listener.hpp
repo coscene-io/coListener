@@ -31,7 +31,7 @@
 #include "colistener.hpp"
 #include "actions/action.hpp"
 #include "persistence/database_manager.hpp"
-#include "utils/logger.hpp"
+#include "utils/curl_client.hpp"
 
 namespace ros1_listener {
 
@@ -45,19 +45,27 @@ public:
 private:
     ros::NodeHandle nh_;
 
-    std::vector<ros::Subscriber> subscribers_;
+    std::map<std::string, ros::Subscriber> subscriptions_;
+    std::set<std::string> subscribe_topics_;
+
     mutable std::mutex message_definitions_mutex_;
     std::map<std::string, std::vector<colistener::MessageField>> message_definitions_;
     static const std::set<std::string> builtin_types_;
     std::shared_ptr<colistener::Action> action_;
     colistener::DatabaseManager database_manager_;
 
-    std::mutex cache_mutex_;
-    std::thread timer_thread_;
-    bool running_ = true;
+    colistener::CurlClient curl_client_;
+    std::string endpoint_;
+    std::map<std::string, std::string> headers_;
 
-    void timer_callback();
-    void send_cached_messages();
+    std::mutex cache_mutex_;
+
+    ros::Timer send_messages_timer_;
+    ros::Timer update_subscriptions_timer_;
+
+
+    void sending_messages(const ros::TimerEvent&);
+    void update_subscriptions(const ros::TimerEvent&);
 
     void callback(const boost::shared_ptr<const topic_tools::ShapeShifter>& msg,
                   const std::string& topic);
