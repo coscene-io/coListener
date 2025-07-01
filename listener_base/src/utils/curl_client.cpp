@@ -210,4 +210,4 @@ void CurlClient::cleanup() {
     }
 }
 
-}  // namespace colistener 
+}  // namespace colistener

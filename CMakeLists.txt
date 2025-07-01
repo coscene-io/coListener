@@ -25,7 +25,11 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG_BUILD)
 endif()
 
 macro(enable_strict_compiler_warnings target)

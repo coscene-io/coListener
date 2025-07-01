@@ -43,7 +43,12 @@ Listener::Listener() : Node("colistener"),
     this->declare_parameter("log_directory", "/tmp/colistener/logs/");
     const std::string log_directory = this->get_parameter("log_directory").as_string();
     colistener::Logger::getInstance().set_log_dir(log_directory);
+
+#ifdef DEBUG_BUILD
+    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
+#else
     colistener::Logger::getInstance().set_log_level(colistener::LogLevel::INFO);
+#endif
 
     COLOG_INFO("coListener - ROS2, version: %s, git hash: %s", colistener::VERSION,
                colistener::GIT_HASH);

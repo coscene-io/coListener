@@ -43,7 +43,11 @@ Listener::Listener() : nh_("~") {
         log_dir = "/tmp/colistener/log/";
     }
     colistener::Logger::getInstance().set_log_dir(log_dir);
+#ifdef DEBUG_BUILD
+    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
+#else
     colistener::Logger::getInstance().set_log_level(colistener::LogLevel::INFO);
+#endif
 
     COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_dir.c_str());
@@ -69,24 +73,7 @@ Listener::Listener() : nh_("~") {
     database_manager_.init(db_path, persistence_expire_interval_secs);
     COLOG_INFO("persistence_file: %s, expire_secs: %d", db_path.c_str(), persistence_expire_interval_secs);
 
-    // std::vector<std::string> topics;
-    // if (!nh_.getParam("subscribe_topics", topics)) {
-    //     topics = {"/error_code", "/error_event"};
-    //     COLOG_WARN("No topics specified, using default topics: %s", vector_to_string<std::string>(topics).c_str());
-    // }
-    // COLOG_INFO("Subscribing to topics: %s", vector_to_string<std::string>(topics).c_str());
-
-    // for (const auto& topic : topics) {
-    //     ros::Subscriber sub = nh_.subscribe<topic_tools::ShapeShifter>(
-    //         topic, 10,
-    //         [this, topic](const topic_tools::ShapeShifter::ConstPtr& msg) {
-    //             this->callback(msg, topic);
-    //         }
-    //     );
-    //     subscribers_.push_back(sub);
-    // }
-
-    send_messages_timer_ = nh_.createTimer(ros::Duration(5.0), 
+    send_messages_timer_ = nh_.createTimer(ros::Duration(5.0),
         [this](const ros::TimerEvent& event) { this->sending_messages(event); });
     update_subscriptions_timer_ = nh_.createTimer(ros::Duration(3.0), 
         [this](const ros::TimerEvent& event) { this->update_subscriptions(event); });

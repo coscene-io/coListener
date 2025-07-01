@@ -70,4 +70,4 @@ private:
 
 }  // namespace colistener
 
-#endif  // UTILS__CURL_CLIENT_HPP_ 
+#endif  // UTILS__CURL_CLIENT_HPP_

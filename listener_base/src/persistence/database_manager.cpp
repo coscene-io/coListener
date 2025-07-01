@@ -89,8 +89,7 @@ bool DatabaseManager::insert_message(const MessageCache& message) {
     if (should_flush) {
         return flush_cache();
     }
-    
-    // 即使不刷新，也要确保消息被正确记录
+
     COLOG_DEBUG("message cache size: %zu", message_cache_.size());
     return true;
 }
@@ -252,14 +251,14 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
     std::vector<MessageCache> messages;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        
-        // 先刷新缓存到数据库，确保所有消息都在数据库中
+
         if (!message_cache_.empty()) {
             COLOG_DEBUG("Flushing %zu cached messages to database", message_cache_.size());
             flush_cache();
         }
         
         // 检查数据库中的总消息数
+#ifdef DEBUG_BUILD
         const auto count_sql = "SELECT COUNT(*) FROM messages;";
         sqlite3_stmt* count_stmt;
         int count_rc = sqlite3_prepare_v2(db_, count_sql, -1, &count_stmt, nullptr);
@@ -270,10 +269,10 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
             }
             sqlite3_finalize(count_stmt);
         }
+#endif
         
         const auto cur_time = std::time(nullptr);
         const auto expired_time = cur_time - expire_time_;
-        COLOG_DEBUG("cur_time: %ld, expired_time: %ld", cur_time, expired_time);
         
         const auto select_sql = "SELECT id, topic, message, datatype, timestamp FROM messages ORDER BY timestamp ASC;";
         sqlite3_stmt* stmt;

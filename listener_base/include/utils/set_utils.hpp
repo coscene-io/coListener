@@ -45,4 +45,4 @@ SetDiff<T> findSetsDifference(const std::set<T>& A, const std::set<T>& B) {
 }
 }  // namespace colistener
 
-#endif  // UTILS__VECTOR_UTILS_HPP_ 
+#endif  // UTILS__VECTOR_UTILS_HPP_
