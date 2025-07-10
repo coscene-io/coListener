@@ -1,9 +1,6 @@
 <launch>
     <node pkg="colistener" type="colistener" name="colistener" output="screen">
         <rosparam>
-            subscribe_topics:
-                - /error_report
-                - /event_tracking_report
             persistence_expire_secs: 1800
             persistence_file_path: "/tmp/colistener/persistence/ros1.db"
             action_type: "common"

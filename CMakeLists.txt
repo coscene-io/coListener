@@ -25,7 +25,11 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG_BUILD)
 endif()
 
 macro(enable_strict_compiler_warnings target)
@@ -67,6 +71,7 @@ add_library(colistener_base SHARED
         listener_base/src/actions/agi_action.cpp
         listener_base/src/persistence/database_manager.cpp
         listener_base/src/utils/logger.cpp
+        listener_base/src/utils/curl_client.cpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/colistener_base/src/version.cpp
 )

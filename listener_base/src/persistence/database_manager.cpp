@@ -90,6 +90,7 @@ bool DatabaseManager::insert_message(const MessageCache& message) {
         return flush_cache();
     }
 
+    COLOG_DEBUG("message cache size: %zu", message_cache_.size());
     return true;
 }
 
@@ -97,6 +98,8 @@ bool DatabaseManager::flush_cache() {
     if (message_cache_.empty()) {
         return true;
     }
+
+    COLOG_DEBUG("Flushing %zu messages into local database", message_cache_.size());
 
     char* err_msg = nullptr;
     if (sqlite3_exec(db_, "BEGIN TRANSACTION", nullptr, nullptr, &err_msg) != SQLITE_OK) {
@@ -110,11 +113,13 @@ bool DatabaseManager::flush_cache() {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(db_, insert_sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
+        COLOG_ERROR("Failed to prepare insert statement: %s", sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
     
     bool success = true;
+    size_t inserted_count = 0;
     for (const auto& message : message_cache_) {
         sqlite3_reset(stmt);
         sqlite3_bind_text(stmt, 1, message.topic.c_str(), -1, SQLITE_STATIC);
@@ -124,27 +129,36 @@ bool DatabaseManager::flush_cache() {
         
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
+            COLOG_ERROR("Failed to insert message: %s", sqlite3_errmsg(db_));
             success = false;
             break;
         }
+        inserted_count++;
     }
     
     sqlite3_finalize(stmt);
     
     if (success) {
         rc = sqlite3_exec(db_, "COMMIT", nullptr, nullptr, &err_msg);
+        if (rc == SQLITE_OK) {
+            COLOG_DEBUG("Successfully inserted %zu messages into database", inserted_count);
+        } else {
+            COLOG_ERROR("Failed to commit transaction: %s", err_msg);
+            sqlite3_free(err_msg);
+            success = false;
+        }
     } else {
         rc = sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, &err_msg);
+        if (rc != SQLITE_OK) {
+            COLOG_ERROR("Failed to rollback transaction: %s", err_msg);
+            sqlite3_free(err_msg);
+        }
     }
     
-    if (rc != SQLITE_OK) {
-        COLOG_ERROR("Transaction failed: %s", err_msg);
-        sqlite3_free(err_msg);
-        return false;
+    if (success) {
+        message_cache_.clear();
+        last_flush_time_ = std::chrono::steady_clock::now();
     }
-    
-    message_cache_.clear();
-    last_flush_time_ = std::chrono::steady_clock::now();
 
     return success;
 }
@@ -237,12 +251,34 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
     std::vector<MessageCache> messages;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+
+        if (!message_cache_.empty()) {
+            COLOG_DEBUG("Flushing %zu cached messages to database", message_cache_.size());
+            flush_cache();
+        }
         
-        const auto expired_time = std::time(nullptr) - expire_time_;        
+        // 检查数据库中的总消息数
+#ifdef DEBUG_BUILD
+        const auto count_sql = "SELECT COUNT(*) FROM messages;";
+        sqlite3_stmt* count_stmt;
+        int count_rc = sqlite3_prepare_v2(db_, count_sql, -1, &count_stmt, nullptr);
+        if (count_rc == SQLITE_OK) {
+            if (sqlite3_step(count_stmt) == SQLITE_ROW) {
+                int total_count = sqlite3_column_int(count_stmt, 0);
+                COLOG_DEBUG("Total messages in database: %d", total_count);
+            }
+            sqlite3_finalize(count_stmt);
+        }
+#endif
+        
+        const auto cur_time = std::time(nullptr);
+        const auto expired_time = cur_time - expire_time_;
+        
         const auto select_sql = "SELECT id, topic, message, datatype, timestamp FROM messages ORDER BY timestamp ASC;";
         sqlite3_stmt* stmt;
         int rc = sqlite3_prepare_v2(db_, select_sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK) {
+            COLOG_ERROR("Failed to prepare select statement: %s", sqlite3_errmsg(db_));
             return messages;
         }
 
@@ -261,18 +297,11 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
         }
 
         sqlite3_finalize(stmt);
-
-        for (const auto& msg : message_cache_) {
-            if (msg.ts > expired_time) {
-                messages.push_back(msg);
-            } else {
-                expired_messages_.push_back(msg);
-            }
-        }
-        message_cache_.clear();
+        COLOG_DEBUG("Retrieved %zu messages from database, %zu expired", messages.size(), expired_messages_.size());
     }
 
     if (!expired_messages_.empty()) {
+        COLOG_DEBUG("Removing %zu expired messages", expired_messages_.size());
         remove_messages(expired_messages_);
         expired_messages_.clear();
     }    

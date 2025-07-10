@@ -23,6 +23,8 @@
 #include <vector>
 
 #include "listener.hpp"
+#include "utils/logger.hpp"
+#include "utils/set_utils.hpp"
 
 namespace ros1_listener {
 const std::set<std::string> Listener::builtin_types_ = {
@@ -30,21 +32,28 @@ const std::set<std::string> Listener::builtin_types_ = {
     "int64", "uint64", "float32", "float64", "string", "time", "duration"
 };
 
-Listener::Listener() {
-    ros::NodeHandle private_nh("~");
+Listener::Listener() : nh_("~") {
+    endpoint_ = std::string(colistener::DEFAULT_URL) + ":" +
+        std::string(colistener::DEFAULT_PORT) + std::string(colistener::ACTIVE_TOPICS);
+    headers_["Content-Type"] = "application/json";
+    headers_["User-Agent"] = "coListener/1.0";
 
     std::string log_dir;
-    if (!private_nh.getParam("log_directory", log_dir)) {
+    if (!nh_.getParam("log_directory", log_dir)) {
         log_dir = "/tmp/colistener/log/";
     }
     colistener::Logger::getInstance().set_log_dir(log_dir);
+#ifdef DEBUG_BUILD
     colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
+#else
+    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::INFO);
+#endif
 
     COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
     COLOG_INFO("log directory: %s", log_dir.c_str());
 
     std::string action_type;
-    if (!private_nh.getParam("action_type", action_type)) {
+    if (!nh_.getParam("action_type", action_type)) {
         action_type = "example";
         COLOG_WARN("No action type specified, using default: %s", action_type.c_str());
     }
@@ -53,41 +62,26 @@ Listener::Listener() {
 
     std::string db_path;
     int persistence_expire_interval_secs;
-    if (!private_nh.getParam("persistence_file_path", db_path)) {
+    if (!nh_.getParam("persistence_file_path", db_path)) {
         db_path = "/tmp/colistener/persistence/ros1.db";
         COLOG_WARN("No persistence file path specified, using default: %s", db_path.c_str());
     }
-    if (!private_nh.getParam("persistence_expire_secs", persistence_expire_interval_secs)) {
+    if (!nh_.getParam("persistence_expire_secs", persistence_expire_interval_secs)) {
         persistence_expire_interval_secs = 3600;
         COLOG_WARN("No persistence expire interval specified, using default: %d", persistence_expire_interval_secs);
     }
     database_manager_.init(db_path, persistence_expire_interval_secs);
     COLOG_INFO("persistence_file: %s, expire_secs: %d", db_path.c_str(), persistence_expire_interval_secs);
 
-    std::vector<std::string> topics;
-    if (!private_nh.getParam("subscribe_topics", topics)) {
-        topics = {"/error_code", "/error_event"};
-        COLOG_WARN("No topics specified, using default topics: %s", vector_to_string<std::string>(topics).c_str());
-    }
-    COLOG_INFO("Subscribing to topics: %s", vector_to_string<std::string>(topics).c_str());
-
-    for (const auto& topic : topics) {
-        ros::Subscriber sub = private_nh.subscribe<topic_tools::ShapeShifter>(
-            topic, 10,
-            [this, topic](const topic_tools::ShapeShifter::ConstPtr& msg) {
-                this->callback(msg, topic);
-            }
-        );
-        subscribers_.push_back(sub);
-    }
-    timer_thread_ = std::thread(&Listener::timer_callback, this);
+    send_messages_timer_ = nh_.createTimer(ros::Duration(5.0),
+        [this](const ros::TimerEvent& event) { this->sending_messages(event); });
+    update_subscriptions_timer_ = nh_.createTimer(ros::Duration(3.0), 
+        [this](const ros::TimerEvent& event) { this->update_subscriptions(event); });
 }
 
 Listener::~Listener() {
-    running_ = false;
-    if (timer_thread_.joinable()) {
-        timer_thread_.join();
-    }
+    send_messages_timer_.stop();
+    update_subscriptions_timer_.stop();
 }
 
 void Listener::callback(const boost::shared_ptr<topic_tools::ShapeShifter const>& msg,
@@ -122,17 +116,69 @@ void Listener::callback(const boost::shared_ptr<topic_tools::ShapeShifter const>
     });
 }
 
-void Listener::timer_callback() {
-    while (running_) {
-        send_cached_messages();
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+void Listener::update_subscriptions(const ros::TimerEvent&)
+{
+    std::set<std::string> topics;
+    colistener::HttpResponse resp = curl_client_.get(endpoint_, headers_);
+    if (resp.success) {
+        try {
+            nlohmann::json response_json = nlohmann::json::parse(resp.body);
+
+            if (response_json.contains("topics") && response_json["topics"].is_array()) {
+                const auto& active_topics = response_json["topics"];
+                for (const auto& topic : active_topics) {
+                    if (topic.is_string()) {
+                        topics.emplace(topic.get<std::string>());
+                    }
+                }
+                COLOG_DEBUG("Received %zu active topics from server", topics.size());
+            }
+        } catch (const nlohmann::json::parse_error& e) {
+            COLOG_ERROR("Failed to parse JSON response: %s", e.what());
+        }
+    } else {
+        COLOG_ERROR("GET request failed: %s", resp.error_message.c_str());
+    }
+
+    const auto diff = colistener::findSetsDifference(subscribe_topics_, topics);
+    if (diff.isIdentical()) {
+        COLOG_DEBUG("no topic was missing or added, skip.");
+        return;
+    }
+    if (!diff.missing.empty()) {
+        for (const auto& removed_topic : diff.missing) {
+            subscriptions_[removed_topic].shutdown();
+            subscriptions_.erase(removed_topic);
+            subscribe_topics_.erase(removed_topic);
+            COLOG_INFO("remove topic [%s] from subscriptions list.", removed_topic.c_str());
+        }
+    }
+
+    if (!diff.added.empty()) {
+        for (const auto& added_topic : diff.added) {
+            ros::Subscriber sub = nh_.subscribe<topic_tools::ShapeShifter>(
+                added_topic, 10,
+                [this, added_topic](const topic_tools::ShapeShifter::ConstPtr& msg) {
+                    this->callback(msg, added_topic);
+                }
+            );
+            subscriptions_.emplace(added_topic, sub);
+            subscribe_topics_.emplace(added_topic);
+            COLOG_INFO("subscribe topic: %s, subscriptions length :%d", added_topic.c_str(), subscriptions_.size());
+        }
     }
 }
 
-void Listener::send_cached_messages() {
+void Listener::sending_messages(const ros::TimerEvent&) {
     const auto msgs = database_manager_.get_all_messages();
+    if (msgs.empty()) {
+        return;
+    }
+
     if (action_->execute(msgs)) {
         database_manager_.remove_messages(msgs);
+    } else {
+        COLOG_INFO("Failed to send messages");
     }
 }
 

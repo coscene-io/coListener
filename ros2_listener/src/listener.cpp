@@ -29,14 +29,26 @@
 #include "listener.hpp"
 #include "create_generic_subscription.hpp"
 #include "utils/logger.hpp"
+#include "utils/set_utils.hpp"
 
 namespace ros2_listener {
 Listener::Listener() : Node("colistener"),
     system_is_little_endian_(check_system_little_endian()) {
+
+    endpoint_ = std::string(colistener::DEFAULT_URL) + ":" +
+        std::string(colistener::DEFAULT_PORT) + std::string(colistener::ACTIVE_TOPICS);
+    headers_["Content-Type"] = "application/json";
+    headers_["User-Agent"] = "coListener/2.0";
+
     this->declare_parameter("log_directory", "/tmp/colistener/logs/");
     const std::string log_directory = this->get_parameter("log_directory").as_string();
     colistener::Logger::getInstance().set_log_dir(log_directory);
+
+#ifdef DEBUG_BUILD
     colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
+#else
+    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::INFO);
+#endif
 
     COLOG_INFO("coListener - ROS2, version: %s, git hash: %s", colistener::VERSION,
                colistener::GIT_HASH);
@@ -55,16 +67,16 @@ Listener::Listener() : Node("colistener"),
     COLOG_INFO("persistence_file: %s, expire_secs: %d", persistence_file.c_str(),
                persistence_secs);
 
-    this->declare_parameter("subscribe_topics", std::vector<std::string>{"/custom_msg_test"});
-    const std::vector<std::string> topics = this->get_parameter("subscribe_topics").as_string_array();
-    pending_topics_ = topics;
-    COLOG_INFO("Subscribing to topics: %s",
-               colistener::vector_to_string<std::string>(topics).c_str());
+    // this->declare_parameter("subscribe_topics", std::vector<std::string>{"/custom_msg_test"});
+    // const std::vector<std::string> topics = this->get_parameter("subscribe_topics").as_string_array();
+    // pending_topics_ = topics;
+    // COLOG_INFO("Subscribing to topics: %s",
+    //            colistener::vector_to_string<std::string>(topics).c_str());
 
-    check_and_subscribe_topics();
-    retry_timer_ = this->create_wall_timer(std::chrono::seconds(1),
+    check_active_topics();
+    retry_timer_ = this->create_wall_timer(std::chrono::seconds(3),
                                            [this] {
-                                               check_and_subscribe_topics();
+                                               check_active_topics();
                                            });
 
     send_timer_ = this->create_wall_timer(std::chrono::seconds(5),
@@ -73,69 +85,93 @@ Listener::Listener() : Node("colistener"),
                                           });
 }
 
-void Listener::check_and_subscribe_topics() {
-    if (pending_topics_.empty()) {
-        retry_timer_->cancel();
-        return;
+Listener::~Listener() = default;
+
+void Listener::check_active_topics()
+{
+    std::set<std::string> topics;
+    colistener::HttpResponse resp = curl_client_.get(endpoint_, headers_);
+    if (resp.success) {
+        try {
+            nlohmann::json response_json = nlohmann::json::parse(resp.body);
+
+            if (response_json.contains("topics") && response_json["topics"].is_array()) {
+                const auto& active_topics = response_json["topics"];
+                for (const auto& topic : active_topics) {
+                    if (topic.is_string()) {
+                        topics.emplace(topic.get<std::string>());
+                    }
+                }
+                COLOG_DEBUG("Received %zu active topics from server", topics.size());
+            }
+        } catch (const nlohmann::json::parse_error& e) {
+            COLOG_ERROR("Failed to parse JSON response: %s", e.what());
+        }
+    } else {
+        COLOG_ERROR("GET request failed: %s", resp.error_message.c_str());
     }
 
-    auto topic_names_and_types = this->get_topic_names_and_types();
-    // COLOG_INFO("current topic count: %d", topic_names_and_types.size());
+    const auto diff = colistener::findSetsDifference(subscribe_topics_, topics);
+    if (diff.isIdentical()) {
+        COLOG_DEBUG("no topic was missing or added, skip.");
+        return;
+    }
+    if (!diff.missing.empty()) {
+        for (const auto& removed_topic : diff.missing) {
+            COLOG_INFO("remove topic [%s] from subscriptions list.", removed_topic.c_str());
+            subscriptions_.erase(removed_topic);
+            subscribe_topics_.erase(removed_topic);
+        }
+    }
 
-    for (auto it = pending_topics_.begin(); it != pending_topics_.end();) {
-        const auto& topic = *it;
-        auto topic_it = topic_names_and_types.find(topic);
+    if (!diff.added.empty()) {
+        auto topic_names_and_types = this->get_topic_names_and_types();
+        for (const auto& added_topic : diff.added) {
+            auto topic_it = topic_names_and_types.find(added_topic);
+            if (topic_it != topic_names_and_types.end() && !topic_it->second.empty()) {
+                const auto& datatypes = topic_it->second;
 
-        if (topic_it != topic_names_and_types.end() && !topic_it->second.empty()) {
-            const auto& datatypes = topic_it->second;
-            bool subscription_success = false;
-
-            try {
-                for (const auto& datatype : datatypes) {
+                try {
+                    for (const auto& datatype : datatypes) {
 #ifdef ROS2_VERSION_HUMBLE
-                    rclcpp::SubscriptionEventCallbacks event_callbacks;
-                    event_callbacks.incompatible_qos_callback =
-                        [this, topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo &) {
-                            COLOG_INFO("Incompatible subscriber QoS settings for topic \"%s\" (%s)",
-                                topic.c_str(), datatype.c_str());
+                        rclcpp::SubscriptionEventCallbacks event_callbacks;
+                        event_callbacks.incompatible_qos_callback =
+                            [this, added_topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo &) {
+                                COLOG_INFO("Incompatible subscriber QoS settings for topic \"%s\" (%s)",
+                                    added_topic.c_str(), datatype.c_str());
                         };
 
-                    rclcpp::SubscriptionOptions subscription_options;
-                    subscription_options.event_callbacks = event_callbacks;
+                        rclcpp::SubscriptionOptions subscription_options;
+                        subscription_options.event_callbacks = event_callbacks;
 
-                    auto subscriber = this->create_generic_subscription(
-                        topic, datatype, get_qos_from_topic(topic),
-                        [this, topic, datatype](std::shared_ptr<rclcpp::SerializedMessage> msg) {
-                            this->callback(msg, topic, datatype);
-                        },
-                        subscription_options);
-                    subscribers_.push_back(subscriber);
-                    subscription_success = true;
+                        auto subscriber = this->create_generic_subscription(
+                            added_topic, datatype, get_qos_from_topic(added_topic),
+                            [this, added_topic, datatype](std::shared_ptr<rclcpp::SerializedMessage> msg) {
+                                this->callback(msg, added_topic, datatype);
+                            },
+                            subscription_options);
+                        subscriptions_.emplace(added_topic, subscriber);
+                        subscribe_topics_.emplace(added_topic);
 #endif
 
 #ifdef ROS2_VERSION_FOXY
-                    auto subscriber = ros2_listener::create_generic_subscription(
-                        this->get_node_topics_interface(),
-                        topic, datatype, get_qos_from_topic(topic),
-                        [this, topic, datatype](const std::shared_ptr<rclcpp::SerializedMessage>& msg) {
-                            this->callback(msg, topic, datatype);
-                        });
-                    subscribers_.push_back(subscriber);
-                    subscription_success = true;
+                        auto subscriber = ros2_listener::create_generic_subscription(
+                            this->get_node_topics_interface(),
+                            added_topic, datatype, get_qos_from_topic(added_topic),
+                            [this, added_topic, datatype](const std::shared_ptr<rclcpp::SerializedMessage>& msg) {
+                                this->callback(msg, added_topic, datatype);
+                            });
+                        subscriptions_.emplace(added_topic, subscriber);
+                        subscribe_topics_.emplace(added_topic);
+                        COLOG_INFO("add topic [%s] to subscriptions list success.", added_topic.c_str());
 #endif
+                    }
+                }
+                catch (const std::exception& e) {
+                    COLOG_INFO("Failed to subscribe to topic '%s': %s", added_topic.c_str(), e.what());
                 }
             }
-            catch (const std::exception& e) {
-                COLOG_INFO("Failed to subscribe to topic '%s': %s", topic.c_str(), e.what());
-            }
-
-            if (subscription_success) {
-                COLOG_INFO("Successfully subscribed to topic: %s", topic.c_str());
-                it = pending_topics_.erase(it);
-                continue;
-            }
         }
-        ++it;
     }
 }
 
