@@ -57,7 +57,7 @@ if(GIT_SCM)
 endif()
 set(COLISTENER_VERSION "${CMAKE_PROJECT_VERSION}")
 configure_file(listener_base/src/version.cpp.in
-        colistener_base/src/version.cpp @ONLY)
+        listener_base/src/version.cpp @ONLY)
 
 
 find_package(CURL REQUIRED)

@@ -1,8 +1,9 @@
 <launch>
     <node pkg="colistener" exec="colistener" name="colistener" output="screen">
-        <param name="persistence_expire_secs" value="3600"/>
+        <param name="persistence_expire_secs" value="86400"/>
         <param name="persistence_file_path" value="/tmp/colistener/persistence/ros2.db"/>
         <param name="action_type" value="common"/>
         <param name="log_directory" value="/tmp/colistener/logs/"/>
+        <param name="log_level" value="Debug/Info/Warning/Error/Fatal"/>
     </node>
 </launch>

@@ -40,30 +40,39 @@ Listener::Listener() : Node("colistener"),
     headers_["Content-Type"] = "application/json";
     headers_["User-Agent"] = "coListener/2.0";
 
-    this->declare_parameter("log_directory", "/tmp/colistener/logs/");
-    const std::string log_directory = this->get_parameter("log_directory").as_string();
-    colistener::Logger::getInstance().set_log_dir(log_directory);
-
-#ifdef DEBUG_BUILD
-    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
-#else
-    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::INFO);
-#endif
-
-    COLOG_INFO("coListener - ROS2, version: %s, git hash: %s", colistener::VERSION,
-               colistener::GIT_HASH);
-    COLOG_INFO("log directory: %s", log_directory.c_str());
-
     this->declare_parameter("action_type", "agi");
     const std::string action_type = this->get_parameter("action_type").as_string();
     action_ = colistener::Action::create(action_type);
-    COLOG_INFO("action_type: %s", action_type.c_str());
 
     this->declare_parameter("persistence_file_path", "/tmp/colistener/persistence/ros2.db");
     const std::string persistence_file = this->get_parameter("persistence_file_path").as_string();
     this->declare_parameter("persistence_expire_secs", 3600);
     const int64_t persistence_secs = this->get_parameter("persistence_expire_secs").as_int();
     database_manager_.init(persistence_file, persistence_secs);
+
+    this->declare_parameter("log_directory", "/tmp/colistener/logs/");
+    const std::string log_directory = this->get_parameter("log_directory").as_string();
+    this->declare_parameter("log_level", "/tmp/colistener/logs/");
+    const std::string log_level = this->get_parameter("log_level").as_string();
+
+    colistener::LogLevel level = colistener::LogLevel::INFO;
+    if (log_level == "Debug") {
+        level = colistener::LogLevel::DEBUG;
+    } else if (log_level == "Info") {
+        level = colistener::LogLevel::INFO;
+    } else if (log_level == "Warn") {
+        level = colistener::LogLevel::WARN;
+    } else if (log_level == "Error") {
+        level = colistener::LogLevel::ERROR;
+    }
+
+    colistener::Logger::getInstance().set_log_dir(log_directory);
+    colistener::Logger::getInstance().set_log_level(level);
+
+    COLOG_INFO("coListener - ROS2, version: %s, git hash: %s", colistener::VERSION,
+               colistener::GIT_HASH);
+    COLOG_INFO("log directory: %s", log_directory.c_str());
+    COLOG_INFO("action_type: %s", action_type.c_str());
     COLOG_INFO("persistence_file: %s, expire_secs: %d", persistence_file.c_str(),
                persistence_secs);
 
