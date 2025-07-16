@@ -73,7 +73,7 @@ add_library(colistener_base SHARED
         listener_base/src/utils/logger.cpp
         listener_base/src/utils/curl_client.cpp
 
-        ${CMAKE_CURRENT_BINARY_DIR}/colistener_base/src/version.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/listener_base/src/version.cpp
 )
 
 target_include_directories(colistener_base
