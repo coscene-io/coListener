@@ -62,7 +62,7 @@ bool CommonAction::execute(const std::vector<MessageCache>& messages) {
         // Log request details
         COLOG_DEBUG("Sending request to endpoint: %s", endpoint_.c_str());
         // Log detailed request payload for debugging
-        COLOG_INFO("Request payload: %s", json_str.c_str());
+        COLOG_DEBUG("Request payload: %s", json_str.c_str());
 
 
         HttpResponse post_response = curl_client_.post(endpoint_, root, headers_);

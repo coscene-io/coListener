@@ -101,6 +101,7 @@ void Listener::check_active_topics()
     std::set<std::string> topics;
     colistener::HttpResponse resp = curl_client_.get(endpoint_, headers_);
     if (resp.success) {
+        COLOG_INFO("GET request success, response: %s", resp.body.c_str());
         try {
             nlohmann::json response_json = nlohmann::json::parse(resp.body);
 
@@ -116,8 +117,6 @@ void Listener::check_active_topics()
         } catch (const nlohmann::json::parse_error& e) {
             COLOG_ERROR("Failed to parse JSON response: %s", e.what());
         }
-    } else {
-        COLOG_ERROR("GET request failed: %s", resp.error_message.c_str());
     }
 
     const auto diff = colistener::findSetsDifference(subscribe_topics_, topics);
@@ -161,6 +160,7 @@ void Listener::check_active_topics()
                             subscription_options);
                         subscriptions_.emplace(added_topic, subscriber);
                         subscribe_topics_.emplace(added_topic);
+                        COLOG_INFO("add topic [%s] to subscriptions list success.", added_topic.c_str());
 #endif
 
 #ifdef ROS2_VERSION_FOXY
