@@ -129,7 +129,6 @@ void Listener::update_subscriptions(const ros::TimerEvent&)
     std::set<std::string> topics;
     colistener::HttpResponse resp = curl_client_.get(endpoint_, headers_);
     if (resp.success) {
-        COLOG_INFO("GET request success, response: %s", resp.body.c_str());
         try {
             nlohmann::json response_json = nlohmann::json::parse(resp.body);
 
