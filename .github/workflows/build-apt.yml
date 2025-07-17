@@ -157,7 +157,7 @@ jobs:
         with:
           ubuntu_distro: ${{ matrix.distro }}
           deb_paths: ${{ github.workspace }}/artifacts/${{ env.DEB_FILENAME }}
-          architectures: ${{ matrix.arch }}
+          architectures: ${{ matrix.platform }}
           storage_type: oss
           endpoint: https://oss-cn-hangzhou.aliyuncs.com
           region: cn-hangzhou
