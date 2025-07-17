@@ -92,7 +92,7 @@ jobs:
       - name: Generate debian/ directory and build .deb package
         id: build_deb
         run: |
-          if [[ "${{ matrix.ros_distribution }}" != "indigo" && "${{ matrix.ros_distribution }}" != "melodic" ]]; then
+          if [ "${{ matrix.ros_distribution }}" != "indigo"] && ["${{ matrix.ros_distribution }}" != "melodic" ]; then
             echo "add git safe directory!"
             git config --global --add safe.directory /__w/coListener/coListener
           fi
