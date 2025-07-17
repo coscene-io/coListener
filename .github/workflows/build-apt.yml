@@ -107,7 +107,13 @@ jobs:
           DEB_FILENAME=$(basename $(ls $GITHUB_WORKSPACE/artifacts/*.deb))
           echo "DEB_FILENAME=$DEB_FILENAME" >> $GITHUB_ENV
           
-          download_url="https://apt.coscene.cn/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/${DEB_FILENAME}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            URL_PREFIX="https://apt.coscene.cn"
+          else
+            URL_PREFIX="https://download.coscene.cn"
+          fi
+          
+          download_url="${URL_PREFIX}/dists/${{ matrix.distro }}/main/binary-${{ matrix.platform }}/${DEB_FILENAME}"
           echo "download url: $download_url"
           echo $GITHUB_REPOSITORY
           
