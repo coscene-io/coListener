@@ -4,6 +4,6 @@
         <param name="persistence_file_path" value="/tmp/colistener/persistence/ros2.db"/>
         <param name="action_type" value="common"/>
         <param name="log_directory" value="/tmp/colistener/logs/"/>
-        <param name="log_level" value="Debug/Info/Warning/Error/Fatal"/>
+        <param name="log_level" value="Info"/>
     </node>
 </launch>
