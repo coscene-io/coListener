@@ -149,15 +149,15 @@ bool DatabaseManager::flush_cache() {
         }
     } else {
         rc = sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, &err_msg);
-        if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK) {
             COLOG_ERROR("Failed to rollback transaction: %s", err_msg);
-            sqlite3_free(err_msg);
+        sqlite3_free(err_msg);
         }
     }
     
     if (success) {
-        message_cache_.clear();
-        last_flush_time_ = std::chrono::steady_clock::now();
+    message_cache_.clear();
+    last_flush_time_ = std::chrono::steady_clock::now();
     }
 
     return success;
@@ -251,7 +251,7 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
     std::vector<MessageCache> messages;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-
+        
         if (!message_cache_.empty()) {
             COLOG_DEBUG("Flushing %zu cached messages to database", message_cache_.size());
             flush_cache();
@@ -304,7 +304,7 @@ std::vector<MessageCache> DatabaseManager::get_all_messages() {
         COLOG_DEBUG("Removing %zu expired messages", expired_messages_.size());
         remove_messages(expired_messages_);
         expired_messages_.clear();
-    }    
+    }
     return messages;
 }
 

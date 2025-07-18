@@ -5,6 +5,7 @@
             persistence_file_path: "/tmp/colistener/persistence/ros1.db"
             action_type: "common"
             log_directory: "/tmp/colistener/logs/"
+            log_level: "Info"
         </rosparam>
     </node>
 </launch>

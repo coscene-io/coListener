@@ -185,11 +185,11 @@ HttpResponse CurlClient::executeRequest() {
 
             if (!response.success) {
                 response.error_message = "HTTP " + std::to_string(http_code);
-                COLOG_ERROR("HTTP request failed with status code: %d", response.status_code);
-                COLOG_ERROR("Response body: %s", response_body.c_str());
-                COLOG_ERROR("Response headers:");
+                COLOG_ERROR("HTTP request from [%s] failed with status code: %d", curl_, response.status_code);
+                COLOG_DEBUG("Response body: %s", response_body.c_str());
+                COLOG_DEBUG("Response headers:");
                 for (const auto& header : response_headers) {
-                    COLOG_ERROR("  %s: %s", header.first.c_str(), header.second.c_str());
+                    COLOG_DEBUG("  %s: %s", header.first.c_str(), header.second.c_str());
                 }
             }
         }

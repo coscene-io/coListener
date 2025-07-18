@@ -38,40 +38,48 @@ Listener::Listener() : nh_("~") {
     headers_["Content-Type"] = "application/json";
     headers_["User-Agent"] = "coListener/1.0";
 
+    std::string action_type;
+    if (!nh_.getParam("action_type", action_type)) {
+        action_type = "example";
+    }
+    action_ = colistener::Action::create(action_type);
+
+    std::string db_path;
+    if (!nh_.getParam("persistence_file_path", db_path)) {
+        db_path = "/tmp/colistener/persistence/ros1.db";
+    }
+
+    int persistence_expire_interval_secs;
+    if (!nh_.getParam("persistence_expire_secs", persistence_expire_interval_secs)) {
+        persistence_expire_interval_secs = 3600;
+    }
+    database_manager_.init(db_path, persistence_expire_interval_secs);
+
     std::string log_dir;
     if (!nh_.getParam("log_directory", log_dir)) {
         log_dir = "/tmp/colistener/log/";
     }
     colistener::Logger::getInstance().set_log_dir(log_dir);
-#ifdef DEBUG_BUILD
-    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::DEBUG);
-#else
-    colistener::Logger::getInstance().set_log_level(colistener::LogLevel::INFO);
-#endif
+
+    colistener::LogLevel level = colistener::LogLevel::INFO;
+    std::string log_level;
+    if (nh_.getParam("log_level",log_level)) {
+        if (log_level == "Debug") {
+            level = colistener::LogLevel::DEBUG;
+        } else if (log_level == "Info") {
+            level = colistener::LogLevel::INFO;
+        } else if (log_level == "Warn") {
+            level = colistener::LogLevel::WARN;
+        } else if (log_level == "Error") {
+            level = colistener::LogLevel::ERROR;
+        }
+    }
+    colistener::Logger::getInstance().set_log_level(level);
 
     COLOG_INFO("coListener - ROS1, version: %s, git hash: %s", colistener::VERSION, colistener::GIT_HASH);
-    COLOG_INFO("log directory: %s", log_dir.c_str());
-
-    std::string action_type;
-    if (!nh_.getParam("action_type", action_type)) {
-        action_type = "example";
-        COLOG_WARN("No action type specified, using default: %s", action_type.c_str());
-    }
-    action_ = colistener::Action::create(action_type);
     COLOG_INFO("action type: %s", action_type.c_str());
-
-    std::string db_path;
-    int persistence_expire_interval_secs;
-    if (!nh_.getParam("persistence_file_path", db_path)) {
-        db_path = "/tmp/colistener/persistence/ros1.db";
-        COLOG_WARN("No persistence file path specified, using default: %s", db_path.c_str());
-    }
-    if (!nh_.getParam("persistence_expire_secs", persistence_expire_interval_secs)) {
-        persistence_expire_interval_secs = 3600;
-        COLOG_WARN("No persistence expire interval specified, using default: %d", persistence_expire_interval_secs);
-    }
-    database_manager_.init(db_path, persistence_expire_interval_secs);
     COLOG_INFO("persistence_file: %s, expire_secs: %d", db_path.c_str(), persistence_expire_interval_secs);
+    COLOG_INFO("log directory: %s", log_dir.c_str());
 
     send_messages_timer_ = nh_.createTimer(ros::Duration(5.0),
         [this](const ros::TimerEvent& event) { this->sending_messages(event); });

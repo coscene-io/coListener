@@ -99,7 +99,6 @@ bool AgiAction::execute(const std::vector<MessageCache>& messages) {
         curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &http_code);
         if (http_code >= 200 && http_code < 300) {
             // Log successful response
-            COLOG_INFO("Request successful, HTTP code: %ld", http_code);
             return true;
         } else {
             // Log failed response
