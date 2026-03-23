@@ -42,6 +42,14 @@ jobs:
             platform: arm64
             distro: bionic
             label: [ linux-arm-64-8c-32g-300gb ]
+          - ros_distribution: jazzy
+            platform: amd64
+            distro: noble
+            label: ubuntu-latest
+          - ros_distribution: jazzy
+            platform: arm64
+            distro: noble
+            label: [ linux-arm-64-8c-32g-300gb ]
           - ros_distribution: indigo
             platform: armhf
             distro: trusty
@@ -58,6 +66,8 @@ jobs:
       matrix_result_melodic_arm64: ${{ steps.build_deb.outputs.matrix_result_melodic_arm64 }}
       matrix_result_foxy_amd64: ${{ steps.build_deb.outputs.matrix_result_foxy_amd64 }}
       matrix_result_foxy_arm64: ${{ steps.build_deb.outputs.matrix_result_foxy_arm64 }}
+      matrix_result_jazzy_amd64: ${{ steps.build_deb.outputs.matrix_result_jazzy_amd64 }}
+      matrix_result_jazzy_arm64: ${{ steps.build_deb.outputs.matrix_result_jazzy_arm64 }}
       matrix_result_humble_amd64: ${{ steps.build_deb.outputs.matrix_result_humble_amd64 }}
       matrix_result_humble_arm64: ${{ steps.build_deb.outputs.matrix_result_humble_arm64 }}
       matrix_result_indigo_armhf: ${{ steps.build_deb.outputs.matrix_result_indigo_armhf }}
@@ -183,6 +193,8 @@ jobs:
           URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_melodic_arm64 }};"
           URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_foxy_amd64 }};"
           URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_foxy_arm64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_jazzy_amd64 }};"
+          URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_jazzy_arm64 }};"
           URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_humble_amd64 }};"
           URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_humble_arm64 }};"
           URLS="${URLS}${{ needs.build-deb-package.outputs.matrix_result_indigo_armhf }};"

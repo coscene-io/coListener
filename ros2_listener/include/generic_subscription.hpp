@@ -16,6 +16,7 @@
 #define GENERIC_SUBSCRIPTION_HPP_
 
 
+#ifdef ROS2_VERSION_FOXY
 #include <memory>
 #include <string>
 
@@ -43,12 +44,6 @@ public:
     void handle_loaned_message(
         void* loaned_message, const rclcpp::MessageInfo& message_info) override;
 
-#ifdef ROS2_VERSION_HUMBLE
-    void handle_serialized_message(
-        const std::shared_ptr<rclcpp::SerializedMessage> & serialized_message,
-        const rclcpp::MessageInfo & message_info) override;
-#endif
-
     void return_message(std::shared_ptr<void>& message) override;
 
     void return_serialized_message(std::shared_ptr<rclcpp::SerializedMessage>& message) override;
@@ -66,4 +61,6 @@ private:
     std::string _topic_name;
 };
 }  // namespace ros2_listener
+#endif
+
 #endif  // GENERIC_SUBSCRIPTION_HPP_

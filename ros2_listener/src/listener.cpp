@@ -82,10 +82,10 @@ Listener::Listener() : Node("colistener"),
     // COLOG_INFO("Subscribing to topics: %s",
     //            colistener::vector_to_string<std::string>(topics).c_str());
 
-    check_active_topics();
+    update_subscribe_topics();
     retry_timer_ = this->create_wall_timer(std::chrono::seconds(3),
                                            [this] {
-                                               check_active_topics();
+                                               update_subscribe_topics();
                                            });
 
     send_timer_ = this->create_wall_timer(std::chrono::seconds(5),
@@ -96,7 +96,7 @@ Listener::Listener() : Node("colistener"),
 
 Listener::~Listener() = default;
 
-void Listener::check_active_topics()
+void Listener::update_subscribe_topics()
 {
     std::set<std::string> topics;
     colistener::HttpResponse resp = curl_client_.get(endpoint_, headers_);

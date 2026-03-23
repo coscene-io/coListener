@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+#ifdef ROS2_VERSION_FOXY
 #include "generic_subscription.hpp"
 
 #include <memory>
@@ -66,15 +66,6 @@ void GenericSubscription::handle_loaned_message(
     (void)message_info;
 }
 
-#ifdef ROS2_VERSION_HUMBLE
-void GenericSubscription::handle_serialized_message(
-    const std::shared_ptr<rclcpp::SerializedMessage> & serialized_message,
-    const rclcpp::MessageInfo & message_info){
-    (void)message_info;
-    _callback(serialized_message);
-}
-#endif
-
 void GenericSubscription::return_message(std::shared_ptr<void>& message) {
     auto typed_message = std::static_pointer_cast<rclcpp::SerializedMessage>(message);
     return_serialized_message(typed_message);
@@ -94,3 +85,4 @@ GenericSubscription::borrow_serialized_message(size_t capacity) {
     return std::make_shared<rclcpp::SerializedMessage>(capacity);
 }
 }  // namespace ros2_listener
+#endif
