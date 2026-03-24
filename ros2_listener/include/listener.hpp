@@ -62,7 +62,7 @@ private:
     std::string endpoint_;
     std::map<std::string, std::string> headers_;
 
-    void check_active_topics();
+    void update_subscribe_topics();
 
     void batch_send_msgs_callback();
 

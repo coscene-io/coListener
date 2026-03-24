@@ -1,6 +1,5 @@
 message(STATUS "ROS_VERSION: " $ENV{ROS_VERSION})
 message(STATUS "ROS_DISTRO: " $ENV{ROS_DISTRO})
-message(STATUS "ROS_ROOT: " $ENV{ROS_ROOT})
 
 if("$ENV{ROS_VERSION}" STREQUAL "1")
     cmake_minimum_required(VERSION 2.8.12)
